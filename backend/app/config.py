@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     homeassistant_url: str | None = None
     homeassistant_token: str | None = None
 
-    tts_provider: str = "espeak"  # espeak | edge | gtts | browser | piper | elevenlabs
+    tts_provider: str = "piper"  # piper (lokal, Thorsten) | edge | gtts | espeak | elevenlabs
     edge_tts_voice: str = "de-DE-ConradNeural"
     gtts_lang: str = "de"
     espeak_voice: str = "de"

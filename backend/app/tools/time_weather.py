@@ -16,11 +16,24 @@ async def get_datetime(timezone: str | None = None) -> str:
             {"error": f"Unbekannte Zeitzone: {tz_name}"}, ensure_ascii=False
         )
     now = datetime.now(tz)
+    weekdays = [
+        "Montag",
+        "Dienstag",
+        "Mittwoch",
+        "Donnerstag",
+        "Freitag",
+        "Samstag",
+        "Sonntag",
+    ]
+    formatted = (
+        f"{weekdays[now.weekday()]}, {now.day:02d}.{now.month:02d}.{now.year} "
+        f"{now.hour:02d}:{now.minute:02d} Uhr"
+    )
     return json.dumps(
         {
             "timezone": tz_name,
             "iso": now.isoformat(),
-            "formatted": now.strftime("%A, %d.%m.%Y %H:%M"),
+            "formatted": formatted,
         },
         ensure_ascii=False,
     )

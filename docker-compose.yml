@@ -45,8 +45,8 @@ services:
       USER_TITLE: Max
       DEFAULT_LANGUAGE: de
       SMART_HOME_PROVIDER: mock
-      TTS_PROVIDER: espeak
-      ESPEAK_VOICE: de
+      TTS_PROVIDER: piper
+      PIPER_VOICE: de_DE-thorsten-high
     env_file:
       - path: .env
         required: false

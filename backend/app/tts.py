@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from fastapi.responses import Response
 
 from app.config import settings
+from app.piper_tts import synthesize_piper_wav
 
 MAX_TTS_CHARS = 2000
 
@@ -30,13 +31,14 @@ async def synthesize(text: str) -> tuple[bytes, str]:
 
     provider = settings.tts_provider
     chain = {
+        "piper": [_piper_local, _edge, _gtts],
         "espeak": [_espeak, _gtts],
-        "edge": [_edge, _espeak, _gtts],
-        "gtts": [_gtts, _espeak],
-        "elevenlabs": [_elevenlabs, _espeak],
-        "piper": [_piper, _espeak],
+        "edge": [_edge, _piper_local, _gtts],
+        "gtts": [_gtts, _piper_local],
+        "elevenlabs": [_elevenlabs, _piper_local],
+        "piper_http": [_piper_http, _piper_local],
         "browser": [],
-    }.get(provider, [_espeak, _gtts])
+    }.get(provider, [_piper_local, _gtts])
 
     errors: list[str] = []
     for fn in chain:
@@ -117,7 +119,11 @@ async def _edge(text: str) -> tuple[bytes, str]:
     return data, "audio/mpeg"
 
 
-async def _piper(text: str) -> tuple[bytes, str]:
+async def _piper_local(text: str) -> tuple[bytes, str]:
+    return await synthesize_piper_wav(text)
+
+
+async def _piper_http(text: str) -> tuple[bytes, str]:
     url = (settings.piper_url or "").rstrip("/")
     if not url:
         raise HTTPException(status_code=503, detail="PIPER_URL fehlt")

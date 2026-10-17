@@ -156,10 +156,11 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
       try {
         const provider = status?.tts_provider ?? "espeak";
         const serverTts =
+          provider === "piper" ||
+          provider === "piper_http" ||
           provider === "espeak" ||
           provider === "gtts" ||
           provider === "edge" ||
-          provider === "piper" ||
           provider === "elevenlabs";
 
         if (isAppleDevice()) {

@@ -29,10 +29,7 @@ def time_reply(data: dict) -> str:
     formatted = data.get("formatted", "unbekannt")
     tz = data.get("timezone", "Europe/Berlin")
     tail = random.choice(_TIME_TAIL)
-    return (
-        f"Es ist {formatted}{_anrede_suffix()} — Zeitzone {tz}. "
-        f"{tail}"
-    )
+    return f"{formatted}{_anrede_suffix()}. {tail}"
 
 
 def weather_reply(data: dict, location: str) -> str:
