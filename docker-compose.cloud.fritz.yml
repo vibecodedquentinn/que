@@ -1,0 +1,11 @@
+# Fritz!Box aus der Cloud: VPN (WireGuard/IPsec/Tailscale) läuft auf dem HOST.
+# Container braucht host-Netzwerk, sonst erreicht er 192.168.178.1 nicht.
+#
+#   docker compose -f docker-compose.cloud.yml -f docker-compose.cloud.fritz.yml up -d --build
+#
+# Siehe docs/FRITZBOX-CLOUD.md
+
+services:
+  juergen:
+    network_mode: host
+    ports: !reset []

@@ -1,0 +1,26 @@
+# Jürgen nur in der Cloud (kein Ollama, kein LAN nötig)
+# Voraussetzung: .env mit LLM_* (z. B. OpenRouter) und PUBLIC_URL
+#
+#   docker compose -f docker-compose.cloud.yml up -d --build
+#
+# Fritz!Box aus Cloud: docs/FRITZBOX-CLOUD.md (+ docker-compose.cloud.fritz.yml)
+
+services:
+  juergen:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      ASSISTANT_NAME: J.Ü.R.G.E.N.
+      DEFAULT_LANGUAGE: de
+      TTS_PROVIDER: piper
+      PIPER_VOICE: de_DE-thorsten-high
+    env_file:
+      - path: .env
+        required: true
+    volumes:
+      - juergen-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  juergen-data:
