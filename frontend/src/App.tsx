@@ -93,7 +93,7 @@ export default function App() {
     [autoSpeak, refreshDevices, speak],
   );
 
-  const { connected, sendMessage, clearSession } = useJarvisSocket(handleWsEvent);
+  const { connected, sendMessage, clearSession } = useAssistantSocket(handleWsEvent);
   sendMessageRef.current = sendMessage;
 
   const submit = useCallback((text: string) => {
@@ -175,11 +175,11 @@ export default function App() {
             <h1>{status?.name ?? "J.Ü.R.G.E.N."}</h1>
             <p className="subtitle acronym">
               {status?.acronym ??
-                "Intelligentes Überwachungs-Routine-Gebäude-Energie-Netzwerk"}
+                "Joint Überwachungs-Regelungs-Gebäude-Energie-Navigator"}
             </p>
             <p className="subtitle">
               {connected ? "Systeme online" : "Verbindung wird aufgebaut…"}
-              {!status?.llm_configured && " · Demo-KI (OPENAI_API_KEY fehlt)"}
+              {!status?.llm_configured && " · Demo-KI (LLM nicht konfiguriert)"}
               {haLabel}
             </p>
           </div>
@@ -267,7 +267,7 @@ export default function App() {
               <dt>Smart Home</dt>
               <dd>{status?.smart_home_provider ?? "mock"}</dd>
               <dt>LLM</dt>
-              <dd>{status?.llm_configured ? "API" : "Fallback"}</dd>
+              <dd>{status?.llm_backend ?? (status?.llm_configured ? "API" : "Fallback")}</dd>
             </dl>
           </section>
         </aside>

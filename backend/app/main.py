@@ -59,6 +59,7 @@ class StatusResponse(BaseModel):
     name: str
     acronym: str
     llm_configured: bool
+    llm_backend: str
     model: str
     language: str
     smart_home_provider: str
@@ -81,8 +82,9 @@ async def status() -> StatusResponse:
     return StatusResponse(
         name=settings.assistant_name,
         acronym=settings.assistant_acronym,
-        llm_configured=bool(settings.openai_api_key),
-        model=settings.openai_model,
+        llm_configured=settings.llm_configured,
+        llm_backend=settings.llm_backend_label,
+        model=settings.effective_llm_model,
         language=settings.default_language,
         smart_home_provider=settings.smart_home_provider,
         homeassistant_connected=ha_ok,

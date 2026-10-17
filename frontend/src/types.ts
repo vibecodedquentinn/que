@@ -25,6 +25,7 @@ export interface AssistantStatus {
   name: string;
   acronym: string;
   llm_configured: boolean;
+  llm_backend: string;
   model: string;
   language: string;
   smart_home_provider: string;

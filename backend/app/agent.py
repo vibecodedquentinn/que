@@ -16,11 +16,12 @@ MAX_TOOL_ROUNDS = 6
 
 
 def _client() -> AsyncOpenAI | None:
-    if not settings.openai_api_key:
+    if not settings.llm_configured:
         return None
+    api_key = settings.effective_llm_api_key or "ollama-local"
     return AsyncOpenAI(
-        api_key=settings.openai_api_key,
-        base_url=settings.openai_base_url or None,
+        api_key=api_key,
+        base_url=settings.effective_llm_base_url or None,
     )
 
 
@@ -53,7 +54,7 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[
 
     for _ in range(MAX_TOOL_ROUNDS):
         stream = await client.chat.completions.create(
-            model=settings.openai_model,
+            model=settings.effective_llm_model,
             messages=messages,
             tools=TOOL_DEFINITIONS,
             tool_choice="auto",

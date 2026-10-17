@@ -61,6 +61,6 @@ async def fallback_reply(user_text: str) -> str:
 
     return (
         f"Entschuldigung{tail}. Für freie Konversation benötige ich einen "
-        "OPENAI_API_KEY in der `.env`. Bis dahin verstehe ich Uhrzeit, Wetter, "
+        "LLM_API_KEY / LLM_BASE_URL (z. B. Ollama) in der `.env`. Bis dahin verstehe ich Uhrzeit, Wetter, "
         "Geräteliste und „Wohnzimmer Licht an/aus“."
     )

@@ -1,48 +1,32 @@
 # J.Ü.R.G.E.N. — Home-Assistent als Website (iPad)
 
-**J.Ü.R.G.E.N.** steht für:
+**J.Ü.R.G.E.N.** = **J**oint **Ü**berwachungs-**R**egelungs-**G**ebäude-**E**nergie-**N**avigator
 
-**J**ntelligentes **Ü**berwachungs-**R**outine-**G**ebäude-**E**nergie-**N**etzwerk
+Website + PWA für iPad: Sprache, Chat, Smart Home, Wetter. Der Assistent heißt **Jürgen**.
 
-Eine **Website**, die du auf dem **iPad** wie eine App nutzen kannst: Sprache, Chat, Smart Home, Wetter, Erinnerungen. Der Assistent stellt sich als **Jürgen** vor — ruhig, sachlich, professionell.
+📖 **Ausführliche Anleitung:** [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md) (LLM, Docker, iPad, Fehlerbehebung)
 
-## iPad schnell starten
+## LLM: nicht Cursor, sondern …
+
+Die **Cursor API** ist für Cloud Agents in der IDE — **kein** Chat-Endpoint für diese App.  
+J.Ü.R.G.E.N. nutzt **OpenAI-kompatible** APIs:
+
+- **Ollama** (lokal, empfohlen) — `LLM_BASE_URL=http://…:11434/v1`
+- **OpenRouter**, **OpenAI**, **Groq**, …
+
+Siehe [docs/EINRICHTUNG.md §1 und §4](docs/EINRICHTUNG.md).
+
+## Schnellstart
 
 ```bash
 cp .env.example .env
+# LLM eintragen (z. B. Ollama — siehe .env.example)
+
 docker compose build
 docker compose --profile https up -d
 ```
 
-Safari: `https://<DEINE-IP>:8443` → **Teilen → Zum Home-Bildschirm**
-
-> Mikrofon auf dem iPad: nur mit **HTTPS** (Caddy-Profile `https`).
-
-## Entwicklung
-
-```bash
-./scripts/dev.sh
-./scripts/build-web.sh && ./scripts/serve-web.sh   # eine URL :8080
-```
-
-## Stimme
-
-| Modus | Beschreibung |
-|--------|----------------|
-| `browser` | Kostenlos; bevorzugt deutsche Männerstimmen (Thorsten/Hans/Markus), tieferer Ton |
-| `elevenlabs` | Standard: **Daniel** (`onwK4e9ZLuTAKqWW03F9`) — ruhig, professionell, Deutsch |
-| `piper` | **Thorsten** (`de_DE-thorsten-high`) über eigenen Piper-HTTP-Server |
-
-## Konfiguration
-
-| Variable | Zweck |
-|----------|--------|
-| `ASSISTANT_NAME` / `ASSISTANT_ACRONYM` | Anzeige & KI-Persönlichkeit |
-| `USER_TITLE` | Anrede (z. B. `Max`); leer = höfliches „Sie“ |
-| `OPENAI_API_KEY` | Volle Konversation |
-| `SMART_HOME_PROVIDER` | `mock` oder `homeassistant` |
-
-Wake-Phrase: **„Hey Jürgen“**
+iPad: `https://<LAN-IP>:8443` → **Zum Home-Bildschirm**
 
 ## Lizenz
 

@@ -12,7 +12,7 @@ export default defineConfig({
         name: "J.Ü.R.G.E.N.",
         short_name: "Jürgen",
         description:
-          "Intelligentes Überwachungs-Routine-Gebäude-Energie-Netzwerk — Home-Assistent für iPad",
+          "Joint Überwachungs-Regelungs-Gebäude-Energie-Navigator — Home-Assistent für iPad",
         theme_color: "#04080f",
         background_color: "#04080f",
         display: "standalone",
