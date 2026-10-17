@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # Legacy-Aliase OPENAI_* werden weiter unterstützt.
     llm_api_key: str | None = None
     llm_base_url: str | None = None
-    llm_model: str = "openai/gpt-4o-mini"
+    llm_model: str = "openrouter/free"
     llm_temperature: float = 0.35
     llm_max_tokens: int | None = 512
     openrouter_api_key: str | None = None

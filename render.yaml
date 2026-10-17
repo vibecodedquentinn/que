@@ -10,7 +10,7 @@ services:
       - key: LLM_BASE_URL
         value: https://openrouter.ai/api/v1
       - key: LLM_MODEL
-        value: openai/gpt-4o-mini
+        value: openrouter/free
       - key: LLM_TEMPERATURE
         value: "0.35"
       - key: LLM_API_KEY

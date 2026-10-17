@@ -6,7 +6,7 @@
 
 **Kein Docker auf dem Mac, kein Ollama-Download, kein `./start`.**
 
-**[docs/CLOUD-NUR.md](docs/CLOUD-NUR.md)** — Render Blueprint, **nur ein** Secret (`LLM_API_KEY` von OpenRouter), Rest ist vorkonfiguriert.
+**[docs/CLOUD-NUR.md](docs/CLOUD-NUR.md)** — Cloud auf Render; **0 €** möglich (Intent-Router ohne Key, oder OpenRouter **`openrouter/free`**).
 
 ---
 
