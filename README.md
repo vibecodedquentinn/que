@@ -18,6 +18,8 @@ chmod +x start
 
 Details: [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md)
 
+**Nur Cloud (nichts lokal):** [docs/CLOUD.md](docs/CLOUD.md) — KI auf dem Server, Zuhause über Home Assistant Remote oder Tailscale.
+
 ## Entwicklung
 
 ```bash
