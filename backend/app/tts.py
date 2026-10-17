@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import io
 import re
+import tempfile
+from pathlib import Path
 
 import httpx
 from fastapi import HTTPException
@@ -26,25 +29,57 @@ async def synthesize(text: str) -> tuple[bytes, str]:
         raise HTTPException(status_code=400, detail="Leerer Text")
 
     provider = settings.tts_provider
+    chain = {
+        "espeak": [_espeak, _gtts],
+        "edge": [_edge, _espeak, _gtts],
+        "gtts": [_gtts, _espeak],
+        "elevenlabs": [_elevenlabs, _espeak],
+        "piper": [_piper, _espeak],
+        "browser": [],
+    }.get(provider, [_espeak, _gtts])
 
-    if provider == "gtts":
-        return await _gtts(cleaned)
-    if provider == "edge":
+    errors: list[str] = []
+    for fn in chain:
         try:
-            return await _edge(cleaned)
-        except HTTPException:
-            return await _gtts(cleaned)
-    if provider == "elevenlabs":
-        return await _elevenlabs(cleaned)
-    if provider == "piper":
-        return await _piper(cleaned)
-    if provider == "browser":
-        raise HTTPException(
-            status_code=400,
-            detail="Server-TTS aus (browser). Frontend nutzt Web Speech API.",
-        )
+            return await fn(cleaned)
+        except HTTPException as exc:
+            errors.append(str(exc.detail))
+        except Exception as exc:
+            errors.append(str(exc))
 
-    raise HTTPException(status_code=400, detail=f"TTS_PROVIDER unbekannt: {provider}")
+    raise HTTPException(status_code=502, detail=f"TTS fehlgeschlagen: {'; '.join(errors)}")
+
+
+async def _espeak(text: str) -> tuple[bytes, str]:
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        out = Path(tmp.name)
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "espeak-ng",
+            "-v",
+            settings.espeak_voice,
+            "-s",
+            str(settings.espeak_speed),
+            "-p",
+            str(settings.espeak_pitch),
+            "-w",
+            str(out),
+            text,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, err = await proc.communicate()
+        if proc.returncode != 0:
+            raise HTTPException(
+                status_code=502,
+                detail=f"espeak-ng: {(err or b'').decode()[:200]}",
+            )
+        data = out.read_bytes()
+        if not data:
+            raise HTTPException(status_code=502, detail="espeak-ng: leere Datei")
+        return data, "audio/wav"
+    finally:
+        out.unlink(missing_ok=True)
 
 
 async def _gtts(text: str) -> tuple[bytes, str]:
@@ -53,8 +88,6 @@ async def _gtts(text: str) -> tuple[bytes, str]:
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="gTTS nicht installiert") from exc
 
-    import asyncio
-
     def _sync() -> bytes:
         buf = io.BytesIO()
         gTTS(text=text, lang=settings.gtts_lang).write_to_fp(buf)
@@ -62,7 +95,7 @@ async def _gtts(text: str) -> tuple[bytes, str]:
 
     data = await asyncio.to_thread(_sync)
     if not data:
-        raise HTTPException(status_code=502, detail="gTTS lieferte keine Audiodaten")
+        raise HTTPException(status_code=502, detail="gTTS leer")
     return data, "audio/mpeg"
 
 
@@ -70,7 +103,7 @@ async def _edge(text: str) -> tuple[bytes, str]:
     try:
         import edge_tts
     except ImportError as exc:
-        raise HTTPException(status_code=503, detail="edge-tts nicht installiert") from exc
+        raise HTTPException(status_code=503, detail="edge-tts fehlt") from exc
 
     voice = settings.edge_tts_voice or "de-DE-ConradNeural"
     buf = io.BytesIO()
@@ -80,30 +113,20 @@ async def _edge(text: str) -> tuple[bytes, str]:
             buf.write(chunk["data"])
     data = buf.getvalue()
     if not data:
-        raise HTTPException(status_code=502, detail="Edge TTS lieferte keine Audiodaten")
+        raise HTTPException(status_code=502, detail="Edge TTS leer")
     return data, "audio/mpeg"
 
 
 async def _piper(text: str) -> tuple[bytes, str]:
     url = (settings.piper_url or "").rstrip("/")
     if not url:
-        raise HTTPException(status_code=503, detail="PIPER_URL nicht gesetzt")
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            r = await client.post(
-                f"{url}/",
-                json={"text": text},
-                headers={"Content-Type": "application/json"},
-            )
-            if r.status_code >= 400:
-                r = await client.get(f"{url}", params={"text": text})
-            r.raise_for_status()
-            ctype = r.headers.get("content-type", "audio/wav")
-            return r.content, ctype
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Piper Fehler: {exc}") from exc
+        raise HTTPException(status_code=503, detail="PIPER_URL fehlt")
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.post(f"{url}/", json={"text": text})
+        if r.status_code >= 400:
+            r = await client.get(url, params={"text": text})
+        r.raise_for_status()
+        return r.content, r.headers.get("content-type", "audio/wav")
 
 
 async def _elevenlabs(text: str) -> tuple[bytes, str]:
@@ -120,20 +143,11 @@ async def _elevenlabs(text: str) -> tuple[bytes, str]:
         "text": text,
         "model_id": settings.elevenlabs_model,
         "language_code": "de",
-        "voice_settings": {
-            "stability": 0.55,
-            "similarity_boost": 0.75,
-            "style": 0.15,
-            "use_speaker_boost": True,
-        },
     }
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            r = await client.post(url, headers=headers, json=payload)
-            r.raise_for_status()
-            return r.content, "audio/mpeg"
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"ElevenLabs Fehler: {exc}") from exc
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.post(url, headers=headers, json=payload)
+        r.raise_for_status()
+        return r.content, "audio/mpeg"
 
 
 async def tts_response(text: str) -> Response:

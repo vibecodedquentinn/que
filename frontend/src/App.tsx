@@ -34,6 +34,9 @@ export default function App() {
     resumeListening,
     pauseListening,
     endVoiceSession,
+    primeAudio,
+    ttsError,
+    unlockAudio,
   } = useSpeech("de-DE", status);
 
   const refreshDevices = useCallback(async () => {
@@ -159,8 +162,14 @@ export default function App() {
   );
 
   const handleVoiceStart = () => {
-    startVoiceSession(onSend);
-    void speakAsync("Sprachsteuerung aktiv. Wie kann ich helfen?");
+    void (async () => {
+      unlockAudio();
+      await primeAudio();
+      startVoiceSession(onSend);
+      await speakAsync(
+        "Sprachsteuerung aktiv. Hier ist Jürgen. Wie kann ich helfen?",
+      );
+    })();
   };
 
   const handleVoiceStop = () => {
@@ -243,6 +252,7 @@ export default function App() {
             processing={processing}
             connected={connected}
             supported={supported}
+            ttsError={ttsError}
             onStart={handleVoiceStart}
             onStop={handleVoiceStop}
           />

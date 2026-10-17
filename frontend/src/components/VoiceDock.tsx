@@ -5,6 +5,7 @@ interface Props {
   processing: boolean;
   connected: boolean;
   supported: boolean;
+  ttsError: string | null;
   onStart: () => void;
   onStop: () => void;
 }
@@ -16,6 +17,7 @@ export function VoiceDock({
   processing,
   connected,
   supported,
+  ttsError,
   onStart,
   onStop,
 }: Props) {
@@ -30,7 +32,7 @@ export function VoiceDock({
 
   return (
     <div className="voice-dock">
-      <p className="voice-hint">{hint}</p>
+      <p className="voice-hint">{ttsError ? `Stimme: ${ttsError}` : hint}</p>
       {!active ? (
         <button
           type="button"

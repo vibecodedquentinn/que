@@ -13,21 +13,33 @@ function getRecognition(): SpeechRecognition | null {
   return Ctor ? new Ctor() : null;
 }
 
-function pickGermanVoice(): SpeechSynthesisVoice | undefined {
+function isAppleDevice(): boolean {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+function pickGermanMaleVoice(): SpeechSynthesisVoice | undefined {
   const voices = window.speechSynthesis.getVoices();
-  const score = (v: SpeechSynthesisVoice): number => {
-    let s = 0;
-    if (!v.lang.toLowerCase().startsWith("de")) return -1;
-    if (/thorsten|hans|markus|stefan|michael|google deutsch/i.test(v.name)) s += 4;
-    if (/male|männlich/i.test(v.name)) s += 3;
-    if (/premium|enhanced|natural/i.test(v.name)) s += 1;
+  const female = /anna|petra|helena|marlene|victoria|female|frau|woman|karen/i;
+  const maleBoost =
+    /markus|martin|hans|michael|stefan|jan|thorsten|helmut|conrad|klaus|thomas|google deutsch/i;
+
+  let best: SpeechSynthesisVoice | undefined;
+  let bestScore = -1;
+  for (const v of voices) {
+    if (!v.lang.toLowerCase().startsWith("de")) continue;
+    if (female.test(v.name)) continue;
+    let s = 1;
+    if (maleBoost.test(v.name)) s += 5;
     if (v.localService) s += 1;
-    return s;
-  };
-  return voices
-    .map((v) => ({ v, s: score(v) }))
-    .filter((x) => x.s >= 0)
-    .sort((a, b) => b.s - a.s)[0]?.v;
+    if (s > bestScore) {
+      bestScore = s;
+      best = v;
+    }
+  }
+  return best ?? voices.find((v) => v.lang.toLowerCase().startsWith("de"));
 }
 
 export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
@@ -35,11 +47,12 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
   const [supported, setSupported] = useState(true);
   const [voiceSession, setVoiceSession] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [ttsError, setTtsError] = useState<string | null>(null);
   const recRef = useRef<SpeechRecognition | null>(null);
   const onResultRef = useRef<(text: string) => void>(() => {});
   const voiceSessionRef = useRef(false);
   const pauseListenRef = useRef(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     voiceSessionRef.current = voiceSession;
@@ -47,10 +60,9 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
 
   useEffect(() => {
     setSupported(!!getRecognition());
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.getVoices();
-      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-    }
+    const loadVoices = () => window.speechSynthesis?.getVoices();
+    loadVoices();
+    window.speechSynthesis && (window.speechSynthesis.onvoiceschanged = loadVoices);
   }, []);
 
   const stop = useCallback(() => {
@@ -64,7 +76,21 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
     stop();
   }, [stop]);
 
-  const speakBrowserAsync = useCallback(
+  const ensureAudioContext = useCallback(async () => {
+    const Ctx =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return null;
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new Ctx();
+    }
+    if (audioCtxRef.current.state === "suspended") {
+      await audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
+  }, []);
+
+  const speakBrowserMaleAsync = useCallback(
     (text: string) =>
       new Promise<void>((resolve) => {
         if (!("speechSynthesis" in window)) {
@@ -74,15 +100,36 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);
         u.lang = lang;
-        u.rate = 0.96;
-        u.pitch = 0.88;
-        const preferred = pickGermanVoice();
-        if (preferred) u.voice = preferred;
+        u.rate = 0.92;
+        u.pitch = 0.78;
+        const voice = pickGermanMaleVoice();
+        if (voice) u.voice = voice;
         u.onend = () => resolve();
         u.onerror = () => resolve();
         window.speechSynthesis.speak(u);
       }),
     [lang],
+  );
+
+  const playArrayBuffer = useCallback(
+    async (data: ArrayBuffer) => {
+      const ctx = await ensureAudioContext();
+      if (!ctx) throw new Error("Kein AudioContext");
+      const buffer = await ctx.decodeAudioData(data.slice(0));
+      await new Promise<void>((resolve, reject) => {
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.onended = () => resolve();
+        source.onerror = () => reject(new Error("Wiedergabe fehlgeschlagen"));
+        try {
+          source.start(0);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    },
+    [ensureAudioContext],
   );
 
   const speakServerAsync = useCallback(
@@ -93,67 +140,67 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
         body: JSON.stringify({ text }),
       });
       if (!res.ok) {
-        await speakBrowserAsync(text);
-        return;
+        throw new Error(`TTS HTTP ${res.status}`);
       }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        URL.revokeObjectURL(audioRef.current.src);
-      }
-      await new Promise<void>((resolve) => {
-        const audio = new Audio(url);
-        audio.setAttribute("playsinline", "true");
-        audioRef.current = audio;
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
-          resolve();
-        };
-        audio.onerror = () => {
-          URL.revokeObjectURL(url);
-          resolve();
-        };
-        void audio.play().catch(() => resolve());
-      });
+      const data = await res.arrayBuffer();
+      await playArrayBuffer(data);
     },
-    [speakBrowserAsync],
+    [playArrayBuffer],
   );
 
   const speakAsync = useCallback(
     async (text: string) => {
+      if (!text.trim()) return;
       setSpeaking(true);
+      setTtsError(null);
       try {
-        const provider = status?.tts_provider ?? "browser";
-        if (
+        const provider = status?.tts_provider ?? "espeak";
+        const serverTts =
+          provider === "espeak" ||
           provider === "gtts" ||
           provider === "edge" ||
           provider === "piper" ||
-          provider === "elevenlabs"
-        ) {
-          await speakServerAsync(text);
+          provider === "elevenlabs";
+
+        if (isAppleDevice()) {
+          try {
+            if (serverTts) await speakServerAsync(text);
+            else await speakBrowserMaleAsync(text);
+          } catch {
+            await speakBrowserMaleAsync(text);
+          }
+        } else if (serverTts) {
+          try {
+            await speakServerAsync(text);
+          } catch {
+            await speakBrowserMaleAsync(text);
+          }
         } else {
-          await speakBrowserAsync(text);
+          await speakBrowserMaleAsync(text);
         }
+      } catch (e) {
+        setTtsError(e instanceof Error ? e.message : "Stimme fehlgeschlagen");
+        await speakBrowserMaleAsync(text);
       } finally {
         setSpeaking(false);
       }
     },
-    [speakBrowserAsync, speakServerAsync, status?.tts_provider],
+    [speakBrowserMaleAsync, speakServerAsync, status?.tts_provider],
   );
 
-  const unlockedRef = useRef(false);
+  const primeAudio = useCallback(async () => {
+    const ctx = await ensureAudioContext();
+    if (!ctx) return;
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  }, [ensureAudioContext]);
+
   const unlockAudio = useCallback(() => {
-    if (unlockedRef.current) return;
-    unlockedRef.current = true;
-    const Ctx =
-      window.AudioContext ||
-      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (Ctx) {
-      const ctx = new Ctx();
-      void ctx.resume();
-    }
-  }, []);
+    void ensureAudioContext();
+  }, [ensureAudioContext]);
 
   const beginCapture = useCallback(() => {
     const rec = getRecognition();
@@ -168,9 +215,7 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
       const last = ev.results[ev.results.length - 1];
       if (!last?.isFinal) return;
       const trimmed = last[0].transcript.trim();
-      if (trimmed.length > 0) {
-        onResultRef.current(trimmed);
-      }
+      if (trimmed.length > 0) onResultRef.current(trimmed);
     };
 
     rec.onend = () => {
@@ -233,11 +278,13 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
     listening,
     speaking,
     voiceSession,
+    ttsError,
     speakAsync,
+    primeAudio,
     unlockAudio,
     startVoiceSession,
     resumeListening,
     pauseListening,
     endVoiceSession,
   };
-}
+};

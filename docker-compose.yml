@@ -45,7 +45,8 @@ services:
       USER_TITLE: Max
       DEFAULT_LANGUAGE: de
       SMART_HOME_PROVIDER: mock
-      TTS_PROVIDER: gtts
+      TTS_PROVIDER: espeak
+      ESPEAK_VOICE: de
     env_file:
       - path: .env
         required: false
