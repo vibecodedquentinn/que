@@ -1,0 +1,13 @@
+{
+  # Für iPad im LAN: selbstsigniertes HTTPS (Safari vertraut nach Bestätigung)
+}
+
+https://:8443 {
+  tls internal
+  reverse_proxy jarvis:8000
+}
+
+# Optional: HTTP → HTTPS Redirect
+http://:8080 {
+  redir https://{host}:8443{uri} permanent
+}

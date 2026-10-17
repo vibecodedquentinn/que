@@ -2,6 +2,8 @@ import type { Device } from "../types";
 
 interface Props {
   devices: Device[];
+  onToggle: (device: Device) => void;
+  busyId: string | null;
 }
 
 function stateLabel(d: Device): string {
@@ -11,7 +13,7 @@ function stateLabel(d: Device): string {
   return d.state;
 }
 
-export function DevicePanel({ devices }: Props) {
+export function DevicePanel({ devices, onToggle, busyId }: Props) {
   return (
     <section className="panel devices-panel">
       <header>
@@ -20,12 +22,19 @@ export function DevicePanel({ devices }: Props) {
       </header>
       <ul className="device-list">
         {devices.map((d) => (
-          <li key={d.id} className={`device ${d.state}`}>
-            <div>
-              <strong>{d.name}</strong>
-              <span className="room">{d.room}</span>
-            </div>
-            <span className="device-state">{stateLabel(d)}</span>
+          <li key={d.id}>
+            <button
+              type="button"
+              className={`device-btn ${d.state} ${busyId === d.id ? "busy" : ""}`}
+              onClick={() => onToggle(d)}
+              disabled={busyId === d.id}
+            >
+              <div>
+                <strong>{d.name}</strong>
+                <span className="room">{d.room}</span>
+              </div>
+              <span className="device-state">{stateLabel(d)}</span>
+            </button>
           </li>
         ))}
       </ul>

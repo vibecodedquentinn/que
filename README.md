@@ -1,78 +1,83 @@
-# J.A.R.V.I.S. Home — persönliche Home-KI
+# J.A.R.V.I.S. Home — Website für iPad & Browser
 
-Ein lauffähiger Prototyp einer **J.A.R.V.I.S.-artigen Home-Assistentin**: Sprache & Chat, Tool-Aufrufe (Wetter, Uhrzeit, Smart Home, Notizen, Erinnerungen), futuristisches UI und optional Anbindung an ein OpenAI-kompatibles LLM.
+Eine **einzige Website**, die du auf dem **iPad** (Safari → *Zum Home-Bildschirm*) wie eine App nutzen kannst: Chat, Sprache, Smart Home, Wetter, Erinnerungen.
 
-> **Hinweis:** Echte Smart-Home-Hardware (Home Assistant, Philips Hue, MQTT, …) ist als **mockbare Schicht** vorbereitet (`backend/app/tools/devices.py`). Du kannst dort deine Integration einhängen.
+## iPad schnell starten (empfohlen)
 
-## Features
-
-- **Chat + WebSocket-Streaming** mit JARVIS-Persönlichkeit (Deutsch standardmäßig)
-- **Spracheingabe** (Browser Web Speech API) und **Sprachausgabe**
-- **Wake-Modus** („Hey JARVIS …“ — browserabhängig, am besten Chrome/Edge)
-- **Tools:** Uhrzeit, Wetter ([wttr.in](https://wttr.in)), Smart-Home-Demo, Erinnerungen, Notizen
-- **Gedächtnis:** SQLite pro Session
-- **Demo ohne API-Key:** einfache Befehle per Fallback-Logik
-
-## Schnellstart (Entwicklung)
+1. Auf einem Rechner im gleichen WLAN:
 
 ```bash
 cp .env.example .env
-# Optional: OPENAI_API_KEY=sk-... eintragen
+# Optional: OPENAI_API_KEY, Home Assistant, TTS
 
-chmod +x scripts/dev.sh
-./scripts/dev.sh
+docker compose build
+docker compose --profile https up -d
 ```
 
-- UI: [http://127.0.0.1:5173](http://127.0.0.1:5173)
-- API: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
+2. Auf dem **iPad** in Safari öffnen:
 
-### Manuell
+`https://<DEINE-IP>:8443`
+
+(Caddy nutzt `tls internal` — Safari einmal „Fortfahren“ bestätigen.)
+
+3. **Teilen → Zum Home-Bildschirm** → JARVIS startet im Vollbild.
+
+> **Mikrofon auf dem iPad:** Apple erlaubt Spracheingabe im Browser nur über **HTTPS** (oder localhost). Deshalb der Caddy-Profile `https`.
+
+## Entwicklung
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
-cd backend && uvicorn app.main:app --reload --port 8000
-
-cd frontend && npm install && npm run dev
+./scripts/dev.sh          # Backend :8000 + Frontend :5173 (Hot Reload)
+./scripts/build-web.sh    # Baut UI nach backend/static — eine URL
+cd backend && uvicorn app.main:app --port 8000   # dann nur :8000
 ```
 
-## Konfiguration (`.env`)
+## Konfiguration
 
-| Variable | Beschreibung |
-|----------|--------------|
-| `OPENAI_API_KEY` | API-Key für volle LLM-Konversation |
-| `OPENAI_BASE_URL` | z. B. `http://localhost:11434/v1` für Ollama |
-| `OPENAI_MODEL` | Modellname |
-| `USER_TITLE` | Anrede (Standard: „Sir“) |
-| `DEFAULT_LANGUAGE` | `de` oder `en` |
+| Variable | Zweck |
+|----------|--------|
+| `OPENAI_API_KEY` | Volle KI-Konversation |
+| `OPENAI_BASE_URL` | z. B. `http://localhost:11434/v1` (Ollama) |
+| `SMART_HOME_PROVIDER` | `mock` oder `homeassistant` |
+| `HOMEASSISTANT_URL` / `HOMEASSISTANT_TOKEN` | Long-Lived Token aus HA |
+| `TTS_PROVIDER` | `browser` (iPad), `elevenlabs`, `piper` |
+| `PUBLIC_URL` | Anzeige/Hinweise für deine LAN-URL |
 
-## Docker
+### Home Assistant
 
-```bash
-cp .env.example .env
-docker compose up --build
-```
+1. Profil → Long-Lived Access Tokens → Token erstellen  
+2. In `.env`: `SMART_HOME_PROVIDER=homeassistant`, URL + Token setzen  
+3. Geräte erscheinen live; KI nutzt `entity_id` (z. B. `light.wohnzimmer`)
 
-Frontend: Port **5173** (nginx), Backend: **8000**.
+### Stimme
+
+- **browser** — kostenlos, auf dem iPad sofort (Sprachausgabe-Toggle)
+- **elevenlabs** — `TTS_PROVIDER=elevenlabs` + API-Key
+- **piper** — eigener Piper-HTTP-Server, `PIPER_URL=...` (Wyoming/Piper-Container optional via `docker compose --profile piper`)
 
 ## Architektur
 
 ```
-frontend (React/Vite)  ←WebSocket/REST→  backend (FastAPI)
-                                              ├─ LLM + Tool Calling
-                                              ├─ SQLite (Chat)
-                                              └─ JSON-Dateien (Geräte, Notizen, …)
+iPad Safari (PWA)
+       │
+       ▼
+  Caddy :8443 HTTPS  ──optional──
+       │
+       ▼
+  FastAPI :8000  ── /api, /ws, statische Website (React)
+       ├── LLM + Tools
+       ├── Home Assistant REST
+       └── SQLite + JSON-Daten
 ```
 
-## Nächste Schritte (für „echtes“ JARVIS)
+## Features
 
-1. **Home Assistant** REST/WebSocket in `devices.py` anbinden
-2. **Wake Word offline** (z. B. openWakeWord + lokales STT)
-3. **Lokales LLM** über Ollama (`OPENAI_BASE_URL`)
-4. **Routinen & Automationen** (Cron, Geofencing)
-5. **Multi-Raum-Audio** (satellite clients)
+- PWA (offline Shell, App-Icon)
+- Touch-optimiertes UI, Safe Areas
+- WebSocket-Chat, Streaming
+- Gerätepanel antippen zum Schalten
+- Demo-Modus ohne API-Key
 
 ## Lizenz
 
-MIT — baue frei darauf auf.
+MIT

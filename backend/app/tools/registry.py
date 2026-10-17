@@ -56,7 +56,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "device_id": {"type": "string", "description": "Geräte-ID"},
+                    "device_id": {
+                        "type": "string",
+                        "description": "Geräte-ID (Mock) oder Home-Assistant entity_id (z.B. light.wohnzimmer)",
+                    },
                     "action": {
                         "type": "string",
                         "enum": ["on", "off", "toggle", "set"],

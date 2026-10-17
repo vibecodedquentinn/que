@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from app.config import settings
+from app.integrations import homeassistant as ha
 
 DEVICES_FILE = Path(settings.data_dir) / "devices.json"
 
@@ -15,6 +16,7 @@ DEFAULT_DEVICES = [
         "room": "Wohnzimmer",
         "state": "off",
         "brightness": 70,
+        "source": "mock",
     },
     {
         "id": "kitchen_light",
@@ -23,6 +25,7 @@ DEFAULT_DEVICES = [
         "room": "Küche",
         "state": "on",
         "brightness": 100,
+        "source": "mock",
     },
     {
         "id": "desk_plug",
@@ -30,6 +33,7 @@ DEFAULT_DEVICES = [
         "type": "switch",
         "room": "Arbeitszimmer",
         "state": "on",
+        "source": "mock",
     },
     {
         "id": "bedroom_blinds",
@@ -38,6 +42,7 @@ DEFAULT_DEVICES = [
         "room": "Schlafzimmer",
         "state": "closed",
         "position": 0,
+        "source": "mock",
     },
     {
         "id": "thermostat_hall",
@@ -47,8 +52,13 @@ DEFAULT_DEVICES = [
         "state": "on",
         "temperature": 21.0,
         "target": 21.0,
+        "source": "mock",
     },
 ]
+
+
+def _use_homeassistant() -> bool:
+    return settings.smart_home_provider == "homeassistant" and ha.configured()
 
 
 def _ensure_file() -> None:
@@ -72,10 +82,15 @@ def _save(devices: list[dict]) -> None:
 
 
 async def list_devices() -> str:
+    if _use_homeassistant():
+        return await ha.list_devices()
     return json.dumps({"devices": _load()}, ensure_ascii=False)
 
 
 async def control_device(device_id: str, action: str, value: str | None = None) -> str:
+    if _use_homeassistant():
+        return await ha.control_device(device_id, action, value)
+
     devices = _load()
     device = next((d for d in devices if d["id"] == device_id), None)
     if not device:

@@ -29,6 +29,10 @@ body {
   font-family: var(--font-body);
   font-size: 18px;
   line-height: 1.45;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
 }
 
 .app {
@@ -187,8 +191,9 @@ body {
   border: 1px solid var(--cyan-dim);
   border-radius: 8px;
   color: var(--text);
-  padding: 0.65rem 0.85rem;
+  padding: 0.85rem 0.85rem;
   font: inherit;
+  font-size: 1.05rem;
 }
 
 .composer input:focus {
@@ -227,8 +232,8 @@ body {
 }
 
 .mic {
-  width: 42px;
-  height: 42px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   border: 1px solid var(--cyan-dim);
   background: rgba(0, 0, 0, 0.35);
@@ -286,12 +291,32 @@ body {
   overflow: auto;
 }
 
-.device {
+.device-list li {
+  list-style: none;
+}
+
+.device-btn {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.65rem 1rem;
+  padding: 0.85rem 1rem;
+  min-height: 56px;
+  border: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.device-btn:active:not(:disabled) {
+  background: rgba(61, 231, 255, 0.08);
+}
+
+.device-btn.busy {
+  opacity: 0.55;
 }
 
 .device strong {
@@ -381,4 +406,49 @@ body {
   to {
     transform: rotate(360deg);
   }
+}
+
+.install-banner,
+.secure-hint {
+  position: relative;
+  z-index: 3;
+  margin: 0.5rem 1rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--cyan-dim);
+  background: rgba(8, 24, 40, 0.92);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.secure-hint {
+  border-color: rgba(255, 92, 122, 0.45);
+  color: #ffdbe3;
+}
+
+.install-banner p,
+.secure-hint p {
+  margin: 0;
+}
+
+.btn.small {
+  padding: 0.35rem 0.6rem;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) and (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-panel {
+    min-height: 55vh;
+  }
+}
+
+.composer {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }

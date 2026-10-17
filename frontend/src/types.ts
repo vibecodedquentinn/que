@@ -17,6 +17,8 @@ export interface Device {
   temperature?: number;
   target?: number;
   position?: number;
+  source?: string;
+  entity_id?: string;
 }
 
 export interface JarvisStatus {
@@ -24,6 +26,10 @@ export interface JarvisStatus {
   llm_configured: boolean;
   model: string;
   language: string;
+  smart_home_provider: string;
+  homeassistant_connected: boolean;
+  tts_provider: string;
+  public_url: string | null;
 }
 
 export type WsEvent =

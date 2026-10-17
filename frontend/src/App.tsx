@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArcReactor } from "./components/ArcReactor";
 import { DevicePanel } from "./components/DevicePanel";
+import { InstallBanner } from "./components/InstallBanner";
+import { SecureContextHint } from "./components/SecureContextHint";
 import { useJarvisSocket } from "./hooks/useJarvisSocket";
 import { useSpeech } from "./hooks/useSpeech";
 import type { ChatMessage, Device, JarvisStatus, WsEvent } from "./types";
@@ -14,6 +16,7 @@ export default function App() {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<JarvisStatus | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [deviceBusy, setDeviceBusy] = useState<string | null>(null);
   const [toolActivity, setToolActivity] = useState<string | null>(null);
   const [autoSpeak, setAutoSpeak] = useState(true);
   const streamIdRef = useRef<string | null>(null);
@@ -21,7 +24,7 @@ export default function App() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const { supported, listening, wakeEnabled, speak, startListening, stop, toggleWake } =
-    useSpeech("de-DE");
+    useSpeech("de-DE", status);
 
   const refreshDevices = useCallback(async () => {
     try {
@@ -93,14 +96,10 @@ export default function App() {
   const { connected, sendMessage, clearSession } = useJarvisSocket(handleWsEvent);
   sendMessageRef.current = sendMessage;
 
-  const submit = useCallback(
-    (text: string) => {
-      sendMessageRef.current(text);
-    },
-    [],
-  );
+  const submit = useCallback((text: string) => {
+    sendMessageRef.current(text);
+  }, []);
 
-  // wire submitUserMessage to use sendMessage
   const onSend = useCallback(
     (text: string) => {
       const trimmed = text.trim();
@@ -117,6 +116,32 @@ export default function App() {
     [submit],
   );
 
+  const toggleDevice = useCallback(
+    async (device: Device) => {
+      const action =
+        device.type === "cover"
+          ? device.state === "open"
+            ? "close"
+            : "open"
+          : device.state === "on"
+            ? "off"
+            : "on";
+      const mapped = action === "close" ? "off" : action === "open" ? "on" : action;
+      setDeviceBusy(device.id);
+      try {
+        await fetch(`/api/devices/${encodeURIComponent(device.id)}/control`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: mapped }),
+        });
+        await refreshDevices();
+      } finally {
+        setDeviceBusy(null);
+      }
+    },
+    [refreshDevices],
+  );
+
   const handleForm = (e: React.FormEvent) => {
     e.preventDefault();
     onSend(input);
@@ -131,9 +156,18 @@ export default function App() {
     startListening((text) => onSend(text), false);
   };
 
+  const haLabel =
+    status?.smart_home_provider === "homeassistant"
+      ? status.homeassistant_connected
+        ? " · Home Assistant verbunden"
+        : " · Home Assistant offline"
+      : " · Demo-Geräte";
+
   return (
     <div className="app">
       <div className="grid-bg" aria-hidden />
+      <InstallBanner />
+      <SecureContextHint />
       <header className="top-bar">
         <div className="brand">
           <ArcReactor active={connected} listening={listening || !!toolActivity} />
@@ -141,7 +175,8 @@ export default function App() {
             <h1>{status?.name ?? "J.A.R.V.I.S."}</h1>
             <p className="subtitle">
               {connected ? "Systeme online" : "Verbindung wird aufgebaut…"}
-              {!status?.llm_configured && " · Demo-Modus (OPENAI_API_KEY fehlt)"}
+              {!status?.llm_configured && " · Demo-KI (OPENAI_API_KEY fehlt)"}
+              {haLabel}
             </p>
           </div>
         </div>
@@ -152,14 +187,14 @@ export default function App() {
               checked={autoSpeak}
               onChange={(e) => setAutoSpeak(e.target.checked)}
             />
-            Sprachausgabe
+            Sprache
           </label>
           <button
             type="button"
             className={`btn ${wakeEnabled ? "active" : ""}`}
             onClick={() => toggleWake((t) => onSend(t))}
             disabled={!supported}
-            title={supported ? "Wake Word: Hey JARVIS" : "Sprache nicht unterstützt"}
+            title={supported ? "Wake: Hey JARVIS" : "Sprache nicht verfügbar"}
           >
             Wake
           </button>
@@ -174,12 +209,12 @@ export default function App() {
           <div className="chat-log">
             {messages.length === 0 && (
               <div className="empty-state">
-                <p>Sag „Hey JARVIS“ oder tippe eine Anfrage.</p>
+                <p>Tippe oder halte das Mikro — JARVIS hört auf dem iPad im Browser.</p>
                 <ul>
                   <li>Wie spät ist es?</li>
-                  <li>Wetter in Berlin</li>
+                  <li>Wetter in München</li>
                   <li>Liste alle Geräte</li>
-                  <li>Schalte das Wohnzimmerlicht an</li>
+                  <li>Schalte light.wohnzimmer an (Home Assistant)</li>
                 </ul>
               </div>
             )}
@@ -189,9 +224,7 @@ export default function App() {
                 <p>{m.content || (m.streaming ? "…" : "")}</p>
               </article>
             ))}
-            {toolActivity && (
-              <p className="tool-hint">Tool: {toolActivity} …</p>
-            )}
+            {toolActivity && <p className="tool-hint">Tool: {toolActivity} …</p>}
             <div ref={chatEndRef} />
           </div>
 
@@ -210,6 +243,7 @@ export default function App() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Befehl oder Frage…"
               autoComplete="off"
+              enterKeyHint="send"
             />
             <button type="submit" className="btn primary" disabled={!connected}>
               Senden
@@ -218,16 +252,18 @@ export default function App() {
         </section>
 
         <aside className="side">
-          <DevicePanel devices={devices} />
+          <DevicePanel devices={devices} onToggle={toggleDevice} busyId={deviceBusy} />
           <section className="panel info-panel">
             <h2>Status</h2>
             <dl>
               <dt>Modell</dt>
               <dd>{status?.model ?? "—"}</dd>
-              <dt>Sprache</dt>
-              <dd>{status?.language ?? "de"}</dd>
+              <dt>TTS</dt>
+              <dd>{status?.tts_provider ?? "browser"}</dd>
+              <dt>Smart Home</dt>
+              <dd>{status?.smart_home_provider ?? "mock"}</dd>
               <dt>LLM</dt>
-              <dd>{status?.llm_configured ? "Konfiguriert" : "Fallback"}</dd>
+              <dd>{status?.llm_configured ? "API" : "Fallback"}</dd>
             </dl>
           </section>
         </aside>

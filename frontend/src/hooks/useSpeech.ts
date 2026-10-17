@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { JarvisStatus } from "../types";
 
 type SpeechRecognitionCtor = new () => SpeechRecognition;
 
@@ -12,7 +13,7 @@ function getRecognition(): SpeechRecognition | null {
   return Ctor ? new Ctor() : null;
 }
 
-export function useSpeech(lang = "de-DE") {
+export function useSpeech(lang = "de-DE", status: JarvisStatus | null) {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const [wakeEnabled, setWakeEnabled] = useState(false);
@@ -20,6 +21,7 @@ export function useSpeech(lang = "de-DE") {
   const onResultRef = useRef<(text: string) => void>(() => {});
   const wakeRef = useRef(wakeEnabled);
   wakeRef.current = wakeEnabled;
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     setSupported(!!getRecognition());
@@ -30,7 +32,7 @@ export function useSpeech(lang = "de-DE") {
     setListening(false);
   }, []);
 
-  const speak = useCallback(
+  const speakBrowser = useCallback(
     (text: string) => {
       if (!("speechSynthesis" in window)) return;
       window.speechSynthesis.cancel();
@@ -40,13 +42,47 @@ export function useSpeech(lang = "de-DE") {
       u.pitch = 0.95;
       const voices = window.speechSynthesis.getVoices();
       const preferred =
-        voices.find((v) => v.lang.startsWith("de") && v.name.includes("Google")) ||
+        voices.find((v) => v.lang.startsWith("de") && /Anna|Google|Premium/i.test(v.name)) ||
         voices.find((v) => v.lang.startsWith("de")) ||
         voices[0];
       if (preferred) u.voice = preferred;
       window.speechSynthesis.speak(u);
     },
     [lang],
+  );
+
+  const speakServer = useCallback(async (text: string) => {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) {
+      speakBrowser(text);
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      URL.revokeObjectURL(audioRef.current.src);
+    }
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onended = () => URL.revokeObjectURL(url);
+    await audio.play();
+  }, [speakBrowser]);
+
+  const speak = useCallback(
+    (text: string) => {
+      const provider = status?.tts_provider ?? "browser";
+      if (provider === "piper" || provider === "elevenlabs") {
+        void speakServer(text);
+      } else {
+        speakBrowser(text);
+      }
+    },
+    [speakBrowser, speakServer, status?.tts_provider],
   );
 
   const startListening = useCallback(
