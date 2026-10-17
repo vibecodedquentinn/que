@@ -1,32 +1,28 @@
-# J.Ü.R.G.E.N. — Home-Assistent als Website (iPad)
+# J.Ü.R.G.E.N.
 
-**J.Ü.R.G.E.N.** = **J**oint **Ü**berwachungs-**R**egelungs-**G**ebäude-**E**nergie-**N**avigator
+**J**oint **Ü**berwachungs-**R**egelungs-**G**ebäude-**E**nergie-**N**avigator — Haus-KI als Website fürs iPad.
 
-Website + PWA für iPad: Sprache, Chat, Smart Home, Wetter. Der Assistent heißt **Jürgen**.
+## Zero-Setup (du musst nichts konfigurieren)
 
-📖 **Ausführliche Anleitung:** [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md) (LLM, Docker, iPad, Fehlerbehebung)
-
-## LLM: nicht Cursor, sondern …
-
-Die **Cursor API** ist für Cloud Agents in der IDE — **kein** Chat-Endpoint für diese App.  
-J.Ü.R.G.E.N. nutzt **OpenAI-kompatible** APIs:
-
-- **Ollama** (lokal, empfohlen) — `LLM_BASE_URL=http://…:11434/v1`
-- **OpenRouter**, **OpenAI**, **Groq**, …
-
-Siehe [docs/EINRICHTUNG.md §1 und §4](docs/EINRICHTUNG.md).
-
-## Schnellstart
+Auf einem Rechner mit **Docker**:
 
 ```bash
-cp .env.example .env
-# LLM eintragen (z. B. Ollama — siehe .env.example)
-
-docker compose build
-docker compose --profile https up -d
+chmod +x start
+./start
 ```
 
-iPad: `https://<LAN-IP>:8443` → **Zum Home-Bildschirm**
+- Beim **ersten Start** lädt Docker automatisch Ollama + Modell (~1–2 Min.)
+- **Kein** OpenAI, **kein** Cursor API, **keine** `.env` nötig
+- iPad (Safari, gleiches WLAN): **`https://<IP>:8443`**
+- Optional öffentlicher Link: `./start --public` → `docker compose logs cloudflared`
+
+Details: [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md)
+
+## Entwicklung
+
+```bash
+./scripts/dev.sh
+```
 
 ## Lizenz
 

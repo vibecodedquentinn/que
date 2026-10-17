@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# J.Ü.R.G.E.N. — vollautomatischer Start (keine .env nötig)
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT"
+
+PUBLIC=false
+for arg in "$@"; do
+  case "$arg" in
+    --public|-p) PUBLIC=true ;;
+    --help|-h)
+      echo "Usage: ./start [--public]"
+      echo "  Standard: Docker mit Ollama + Jürgen (http://localhost:8080)"
+      echo "  --public: zusätzlich Cloudflare-Quick-Tunnel (HTTPS-Link fürs iPad)"
+      exit 0
+      ;;
+  esac
+done
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "Docker fehlt. Installiere Docker Desktop oder: https://docs.docker.com/engine/install/" >&2
+  exit 1
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  echo "Docker-Daemon läuft nicht. Bitte Docker starten." >&2
+  exit 1
+fi
+
+COMPOSE=(docker compose --profile https)
+if $PUBLIC; then
+  COMPOSE+=(--profile public)
+fi
+
+echo "==> Baue & starte J.Ü.R.G.E.N. (Ollama + KI + Website)…"
+echo "    Beim ersten Mal: Modell-Download — kann einige Minuten dauern."
+docker compose build
+"${COMPOSE[@]}" up -d
+
+LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+echo ""
+echo "=============================================="
+echo "  J.Ü.R.G.E.N. läuft"
+echo "=============================================="
+echo "  PC:        http://127.0.0.1:8080"
+if [[ -n "${LAN_IP:-}" ]]; then
+  echo "  WLAN/iPad: https://${LAN_IP}:8443  (Mikro OK mit HTTPS)"
+fi
+echo ""
+
+if $PUBLIC; then
+  echo "  Öffentlicher HTTPS-Link (Cloudflare) — Logs:"
+  echo "  docker compose logs -f cloudflared"
+  echo ""
+  sleep 3
+  docker compose logs cloudflared 2>/dev/null | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1 || true
+fi
+
+echo ""
+echo "  Status: curl -s http://127.0.0.1:8080/api/status | head -c 200"
+echo "  Stop:   docker compose --profile https --profile public down"
+echo "=============================================="

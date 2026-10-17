@@ -1,10 +1,54 @@
+# Ein Befehl:  ./start
+# Optional:    ./start --public   (HTTPS-Link fürs iPad ohne LAN-Setup)
+
 services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        export OLLAMA_HOST=http://ollama:11434
+        echo "Lade Modell llama3.2:1b (einmalig, ~1.3GB)…"
+        ollama pull llama3.2:1b
+        echo "Modell bereit."
+
   juergen:
     build: .
     ports:
       - "8080:8000"
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
+    environment:
+      LLM_BASE_URL: http://ollama:11434/v1
+      LLM_MODEL: llama3.2:1b
+      LLM_API_KEY: ollama
+      ASSISTANT_NAME: J.Ü.R.G.E.N.
+      ASSISTANT_ACRONYM: Joint Überwachungs-Regelungs-Gebäude-Energie-Navigator
+      USER_TITLE: Max
+      DEFAULT_LANGUAGE: de
+      SMART_HOME_PROVIDER: mock
+      TTS_PROVIDER: browser
     env_file:
-      - .env
+      - path: .env
+        required: false
     volumes:
       - juergen-data:/app/data
     restart: unless-stopped
@@ -14,12 +58,20 @@ services:
     image: caddy:2-alpine
     ports:
       - "8443:8443"
-      - "8081:8080"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
     depends_on:
       - juergen
     restart: unless-stopped
 
+  cloudflared:
+    profiles: ["public"]
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://juergen:8000
+    depends_on:
+      - juergen
+    restart: unless-stopped
+
 volumes:
   juergen-data:
+  ollama-data:
