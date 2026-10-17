@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArcReactor } from "./components/ArcReactor";
+import { JuergenHologram } from "./components/JuergenHologram";
 import { DevicePanel } from "./components/DevicePanel";
 import { InstallBanner } from "./components/InstallBanner";
 import { SecureContextHint } from "./components/SecureContextHint";
@@ -197,9 +197,13 @@ export default function App() {
       <SecureContextHint />
       <header className="top-bar">
         <div className="brand">
-          <ArcReactor
-            active={connected}
-            listening={listening || speaking || !!toolActivity || processing}
+          <JuergenHologram
+            variant="compact"
+            online={connected}
+            active={voiceSession}
+            listening={listening}
+            speaking={speaking}
+            processing={processing || !!toolActivity}
           />
           <div>
             <h1>{status?.name ?? "J.Ü.R.G.E.N."}</h1>
@@ -223,6 +227,17 @@ export default function App() {
 
       <main className="layout voice-layout">
         <section className="panel chat-panel">
+          <div className="juergen-face-stage">
+            <JuergenHologram
+              variant="stage"
+              online={connected}
+              active={voiceSession}
+              listening={listening}
+              speaking={speaking}
+              processing={processing || !!toolActivity}
+            />
+            <p className="juergen-face-label">Jürgen</p>
+          </div>
           <div className="chat-log">
             {messages.length === 0 && (
               <div className="empty-state">

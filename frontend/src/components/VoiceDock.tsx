@@ -36,22 +36,22 @@ export function VoiceDock({
       {!active ? (
         <button
           type="button"
-          className="voice-orb start"
+          className="voice-orb start holo-ring"
           onClick={onStart}
           disabled={!supported || !connected}
           aria-label="Sprachsteuerung starten"
         >
-          <span className="orb-inner" />
+          <span className="orb-inner holo" />
           <span className="orb-label">Start</span>
         </button>
       ) : (
         <button
           type="button"
-          className={`voice-orb ${listening ? "listen" : ""} ${speaking ? "speak" : ""}`}
+          className={`voice-orb holo-ring ${listening ? "listen" : ""} ${speaking ? "speak" : ""}`}
           onClick={onStop}
           aria-label="Sprachsteuerung beenden"
         >
-          <span className="orb-inner" />
+          <span className="orb-inner holo" />
           <span className="orb-label">{speaking ? "…" : listening ? "◉" : "…"}</span>
         </button>
       )}

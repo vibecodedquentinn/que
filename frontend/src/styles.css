@@ -3,6 +3,8 @@
   --bg-panel: rgba(8, 20, 35, 0.82);
   --cyan: #3de7ff;
   --cyan-dim: rgba(61, 231, 255, 0.35);
+  --holo-amber: #ff9500;
+  --holo-glow: rgba(255, 149, 0, 0.45);
   --text: #d8f4ff;
   --muted: #7a9eb5;
   --danger: #ff5c7a;
@@ -126,6 +128,68 @@ body {
   min-height: calc(100vh - 140px);
 }
 
+.juergen-face-stage {
+  position: relative;
+  flex-shrink: 0;
+  height: min(36vh, 300px);
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 149, 0, 0.15);
+  background: radial-gradient(
+    ellipse 70% 85% at 50% 45%,
+    rgba(255, 140, 0, 0.12),
+    transparent 65%
+  );
+  overflow: hidden;
+}
+
+.juergen-face-label {
+  margin: -0.5rem 0 0.35rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.35em;
+  color: rgba(255, 180, 80, 0.85);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.juergen-hologram {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  filter: drop-shadow(0 0 28px var(--holo-glow));
+}
+
+.juergen-hologram--compact {
+  width: 100%;
+  height: 100%;
+}
+
+.juergen-hologram--stage.is-online {
+  filter: drop-shadow(0 0 42px var(--holo-glow)) drop-shadow(0 0 80px rgba(255, 120, 0, 0.15));
+}
+
+.juergen-hologram.is-listening {
+  filter: drop-shadow(0 0 52px rgba(255, 170, 50, 0.65));
+}
+
+.juergen-hologram.is-speaking {
+  filter: drop-shadow(0 0 48px rgba(255, 200, 100, 0.7));
+}
+
+.juergen-hologram.is-thinking {
+  filter: drop-shadow(0 0 56px rgba(255, 120, 0, 0.75));
+}
+
+.brand .juergen-hologram {
+  width: 56px;
+  height: 56px;
+  filter: drop-shadow(0 0 14px var(--holo-glow));
+}
+
 .chat-log {
   flex: 1;
   overflow-y: auto;
@@ -220,6 +284,27 @@ body {
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
+  overflow: hidden;
+}
+
+.voice-orb.has-hologram {
+  width: min(132px, 30vw);
+  height: min(132px, 30vw);
+  border-color: rgba(255, 149, 0, 0.45);
+  background: radial-gradient(circle at 50% 45%, rgba(255, 140, 0, 0.12), rgba(0, 0, 0, 0.55));
+  box-shadow: 0 0 36px rgba(255, 149, 0, 0.2);
+}
+
+.voice-orb.has-hologram .juergen-hologram {
+  position: absolute;
+  inset: 0;
+}
+
+.voice-orb.has-hologram .orb-label {
+  background: rgba(4, 8, 15, 0.72);
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 149, 0, 0.35);
 }
 
 .voice-orb.start {
@@ -241,6 +326,17 @@ body {
   border-radius: 50%;
   background: radial-gradient(circle, #fff 0%, var(--cyan) 55%, transparent 70%);
   opacity: 0.75;
+}
+
+.orb-inner.holo {
+  inset: 12%;
+  background: radial-gradient(circle, #fff8e6 0%, var(--holo-amber) 45%, transparent 72%);
+  opacity: 0.85;
+  box-shadow: 0 0 24px var(--holo-glow);
+}
+
+.voice-orb.holo-ring {
+  border-color: rgba(255, 149, 0, 0.4);
 }
 
 .orb-label {
