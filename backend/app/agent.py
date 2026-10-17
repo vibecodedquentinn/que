@@ -1,0 +1,144 @@
+from __future__ import annotations
+
+import json
+from collections.abc import AsyncIterator
+from typing import Any
+
+from openai import AsyncOpenAI
+
+from app.config import settings
+from app.fallback import fallback_reply
+from app.memory import append_message, get_recent_messages
+from app.prompts import system_prompt
+from app.tools import TOOL_DEFINITIONS, run_tool
+
+MAX_TOOL_ROUNDS = 6
+
+
+def _client() -> AsyncOpenAI | None:
+    if not settings.openai_api_key:
+        return None
+    return AsyncOpenAI(
+        api_key=settings.openai_api_key,
+        base_url=settings.openai_base_url or None,
+    )
+
+
+async def chat_once(session_id: str, user_message: str) -> str:
+    chunks: list[str] = []
+    async for part in chat_stream(session_id, user_message):
+        if part["type"] == "text":
+            chunks.append(part["content"])
+        elif part["type"] == "error":
+            return part["content"]
+    return "".join(chunks)
+
+
+async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[str, Any]]:
+    await append_message(session_id, "user", user_message)
+
+    client = _client()
+    if client is None:
+        reply = await fallback_reply(user_message)
+        await append_message(session_id, "assistant", reply)
+        yield {"type": "text", "content": reply}
+        yield {"type": "done"}
+        return
+
+    history = await get_recent_messages(session_id, limit=24)
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": system_prompt()},
+        *history,
+    ]
+
+    for _ in range(MAX_TOOL_ROUNDS):
+        stream = await client.chat.completions.create(
+            model=settings.openai_model,
+            messages=messages,
+            tools=TOOL_DEFINITIONS,
+            tool_choice="auto",
+            stream=True,
+        )
+
+        tool_calls: dict[int, dict[str, Any]] = {}
+        assistant_text = ""
+
+        async for chunk in stream:
+            choice = chunk.choices[0]
+            delta = choice.delta
+
+            if delta.content:
+                assistant_text += delta.content
+                yield {"type": "text", "content": delta.content}
+
+            if delta.tool_calls:
+                for tc in delta.tool_calls:
+                    idx = tc.index
+                    if idx not in tool_calls:
+                        tool_calls[idx] = {
+                            "id": tc.id or "",
+                            "name": "",
+                            "arguments": "",
+                        }
+                    if tc.id:
+                        tool_calls[idx]["id"] = tc.id
+                    if tc.function:
+                        if tc.function.name:
+                            tool_calls[idx]["name"] = tc.function.name
+                        if tc.function.arguments:
+                            tool_calls[idx]["arguments"] += tc.function.arguments
+
+            if choice.finish_reason == "tool_calls":
+                ordered = [tool_calls[i] for i in sorted(tool_calls.keys())]
+                assistant_msg: dict[str, Any] = {
+                    "role": "assistant",
+                    "content": assistant_text or None,
+                    "tool_calls": [
+                        {
+                            "id": t["id"],
+                            "type": "function",
+                            "function": {
+                                "name": t["name"],
+                                "arguments": t["arguments"] or "{}",
+                            },
+                        }
+                        for t in ordered
+                    ],
+                }
+                messages.append(assistant_msg)
+                if assistant_text:
+                    await append_message(session_id, "assistant", assistant_text)
+
+                for t in ordered:
+                    yield {
+                        "type": "tool_start",
+                        "name": t["name"],
+                    }
+                    result = await run_tool(t["name"], t["arguments"] or "{}")
+                    yield {"type": "tool_end", "name": t["name"], "result": result}
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": t["id"],
+                            "content": result,
+                        }
+                    )
+                assistant_text = ""
+                break
+
+            if choice.finish_reason == "stop":
+                final = assistant_text.strip()
+                if final:
+                    await append_message(session_id, "assistant", final)
+                yield {"type": "done"}
+                return
+
+        else:
+            continue
+        continue
+
+    yield {
+        "type": "error",
+        "content": "Zu viele Tool-Schritte — bitte Anfrage vereinfachen.",
+    }
+    yield {"type": "done"}
