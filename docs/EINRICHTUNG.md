@@ -1,6 +1,8 @@
-# J.Ü.R.G.E.N. — Zero-Setup
+# J.Ü.R.G.E.N. — Lokal (Entwicklung)
 
-## Du musst nichts konfigurieren
+> **Normalbetrieb = nur Cloud, nichts auf dem Mac:** [CLOUD-NUR.md](CLOUD-NUR.md)
+
+## Du musst nichts konfigurieren (lokal)
 
 Alles ist vorkonfiguriert: **Ollama**, **KI-Modell**, **Website**, **HTTPS im LAN**.
 

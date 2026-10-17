@@ -1,4 +1,8 @@
-# Jürgen in der Cloud (nicht zu Hause)
+# Jürgen in der Cloud (Architektur)
+
+**Schritt-für-Schritt ohne lokalen Rechner:** **[CLOUD-NUR.md](CLOUD-NUR.md)**
+
+---
 
 Du kannst **Jürgen komplett in der Cloud** betreiben — kein Docker auf dem Mac, kein NAS, kein Raspberry Pi **für die App**.
 

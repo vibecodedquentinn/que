@@ -2,23 +2,27 @@
 
 **J**oint **Ü**berwachungs-**R**egelungs-**G**ebäude-**E**nergie-**N**avigator — Haus-KI als Website fürs iPad.
 
-## Zero-Setup (du musst nichts konfigurieren)
+## Nur Cloud (empfohlen — nichts lokal)
 
-Auf einem Rechner mit **Docker**:
+**Kein Docker auf dem Mac, kein Ollama-Download, kein `./start`.**
+
+| Schritt | Link |
+|--------|------|
+| Komplett-Anleitung | **[docs/CLOUD-NUR.md](docs/CLOUD-NUR.md)** |
+| OpenRouter + Render / Fly / Hetzner | dort beschrieben |
+| Nur Fritz!Box aus der Cloud | [docs/FRITZBOX-CLOUD.md](docs/FRITZBOX-CLOUD.md) |
+
+Kurz: Repo auf **Render** (Blueprint `render.yaml`) oder **Fly** (`fly.toml`) deployen, `LLM_API_KEY` setzen, HTTPS-URL auf dem iPad speichern.
+
+---
+
+## Lokal (nur Entwicklung)
 
 ```bash
-chmod +x start
 ./start
 ```
 
-- Beim **ersten Start** lädt Docker automatisch Ollama + Modell (~1–2 Min.)
-- **Kein** OpenAI, **kein** Cursor API, **keine** `.env` nötig
-- iPad (Safari, gleiches WLAN): **`https://<IP>:8443`**
-- Optional öffentlicher Link: `./start --public` → `docker compose logs cloudflared`
-
-Details: [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md)
-
-**Nur Cloud:** [docs/CLOUD.md](docs/CLOUD.md) — **nur Fritz!Box:** [docs/FRITZBOX-CLOUD.md](docs/FRITZBOX-CLOUD.md) (WireGuard-VPN, kein Home Assistant).
+Ollama + kleines/lokales Modell — **nicht** für den Normalbetrieb gedacht. Siehe [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md).
 
 ## Entwicklung
 
