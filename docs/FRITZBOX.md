@@ -44,8 +44,8 @@ Jürgen muss die Box **technisch erreichen** (TR-064 ist kein öffentliches Web-
 | Wo Jürgen läuft | So klappt Fritz!Box |
 |-----------------|---------------------|
 | Zu Hause (`./start`) | `FRITZBOX_HOST=192.168.178.1` im LAN |
-| **Cloud** (VPS) | **Tailscale** ins Heimnetz (Subnet `192.168.178.0/24`) — siehe [CLOUD.md](CLOUD.md) |
-| **Cloud** ohne Tailscale | Fritz über **Home Assistant** (+ Nabu Casa), nicht direkt |
+| **Cloud** (VPS), **nur Fritz!Box** | **WireGuard-VPN** der Fritz!Box — [FRITZBOX-CLOUD.md](FRITZBOX-CLOUD.md) |
+| **Cloud** + Home Assistant | Nabu Casa oder Tailscale — [CLOUD.md](CLOUD.md) |
 
 **Quick-Tunnel (`./start --public`)** macht nur die **Jürgen-Website** öffentlich — **nicht** die Fritz!Box. Für „Jürgen nur in der Cloud“: [CLOUD.md](CLOUD.md).
 

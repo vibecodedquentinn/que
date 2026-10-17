@@ -3,7 +3,7 @@
 #
 #   docker compose -f docker-compose.cloud.yml up -d --build
 #
-# Heimnetz (Fritz!Box, Geräte): docs/CLOUD.md
+# Fritz!Box aus Cloud: docs/FRITZBOX-CLOUD.md (+ docker-compose.cloud.fritz.yml)
 
 services:
   juergen:

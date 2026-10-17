@@ -18,7 +18,7 @@ chmod +x start
 
 Details: [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md)
 
-**Nur Cloud (nichts lokal):** [docs/CLOUD.md](docs/CLOUD.md) — KI auf dem Server, Zuhause über Home Assistant Remote oder Tailscale.
+**Nur Cloud:** [docs/CLOUD.md](docs/CLOUD.md) — **nur Fritz!Box:** [docs/FRITZBOX-CLOUD.md](docs/FRITZBOX-CLOUD.md) (WireGuard-VPN, kein Home Assistant).
 
 ## Entwicklung
 
