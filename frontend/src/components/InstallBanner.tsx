@@ -34,7 +34,7 @@ export function InstallBanner() {
     <aside className="install-banner" role="note">
       {isIOS() ? (
         <p>
-          <strong>iPad:</strong> Teilen → <em>Zum Home-Bildschirm</em> — dann startet JARVIS wie eine App.
+          <strong>iPad:</strong> Teilen → <em>Zum Home-Bildschirm</em> — dann startet J.Ü.R.G.E.N. wie eine App.
           Für das Mikrofon brauchst du <strong>HTTPS</strong> (siehe README).
         </p>
       ) : (

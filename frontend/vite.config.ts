@@ -9,9 +9,10 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/icon.svg"],
       manifest: {
-        name: "J.A.R.V.I.S. Home",
-        short_name: "JARVIS",
-        description: "Persönliche Home-KI — optimiert für iPad",
+        name: "J.Ü.R.G.E.N.",
+        short_name: "Jürgen",
+        description:
+          "Intelligentes Überwachungs-Routine-Gebäude-Energie-Netzwerk — Home-Assistent für iPad",
         theme_color: "#04080f",
         background_color: "#04080f",
         display: "standalone",

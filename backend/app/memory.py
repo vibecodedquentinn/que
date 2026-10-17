@@ -7,7 +7,7 @@ import aiosqlite
 
 from app.config import settings
 
-DB_PATH = Path(settings.data_dir) / "jarvis.db"
+DB_PATH = Path(settings.data_dir) / "juergen.db"
 
 
 async def init_db() -> None:

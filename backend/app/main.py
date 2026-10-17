@@ -25,7 +25,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="JARVIS Home", version="1.1.0", lifespan=lifespan)
+app = FastAPI(title="J.Ü.R.G.E.N.", version="1.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -57,6 +57,7 @@ class TtsRequest(BaseModel):
 
 class StatusResponse(BaseModel):
     name: str
+    acronym: str
     llm_configured: bool
     model: str
     language: str
@@ -78,7 +79,8 @@ async def health() -> dict[str, str]:
 async def status() -> StatusResponse:
     ha_ok = await ha.ping() if ha.configured() else False
     return StatusResponse(
-        name=settings.jarvis_name,
+        name=settings.assistant_name,
+        acronym=settings.assistant_acronym,
         llm_configured=bool(settings.openai_api_key),
         model=settings.openai_model,
         language=settings.default_language,

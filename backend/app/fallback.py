@@ -9,19 +9,27 @@ from app.config import settings
 from app.tools.registry import run_tool
 
 
+def _tail() -> str:
+    a = settings.address(leading_comma=True)
+    return a if a else ""
+
+
 async def fallback_reply(user_text: str) -> str:
     text = user_text.strip()
     lower = text.lower()
-    title = settings.user_title
+    tail = _tail()
 
-    if re.search(r"\b(hallo|hi|hey|guten (tag|morgen|abend))\b", lower):
-        return f"Guten Tag, {title}. Systeme sind online. Wie kann ich behilflich sein?"
+    if re.search(r"\b(hallo|hi|hey|guten (tag|morgen|abend)|jürgen|juergen)\b", lower):
+        return (
+            f"Guten Tag{tail}. {settings.assistant_name} ist online. "
+            f"Wobei darf ich unterstützen?"
+        )
 
     if re.search(r"\b(uhrzeit|wie spät|datum)\b", lower):
         raw = await run_tool("get_datetime", {})
         data = json.loads(raw)
         return (
-            f"Es ist {data.get('formatted', 'unbekannt')}, {title} "
+            f"Es ist {data.get('formatted', 'unbekannt')}{tail} "
             f"({data.get('timezone', 'Europe/Berlin')})."
         )
 
@@ -33,16 +41,15 @@ async def fallback_reply(user_text: str) -> str:
         raw = await run_tool("get_weather", {"location": loc})
         w = json.loads(raw)
         if "error" in w:
-            return f"{w['error']}, {title}."
+            return f"{w['error']}{tail}."
         return (
             f"In {w.get('location', loc)} sind es {w.get('temperature_c')} Grad Celsius, "
-            f"{w.get('description')}. Luftfeuchtigkeit {w.get('humidity_percent')} Prozent, "
-            f"{title}."
+            f"{w.get('description')}. Luftfeuchtigkeit {w.get('humidity_percent')} Prozent{tail}."
         )
 
     if re.search(r"\b(gerät|geräte|smart.?home|lichter)\b", lower):
         raw = await run_tool("list_smart_devices", {})
-        return f"Hier ist der Gerätestatus, {title}: {raw}"
+        return f"Aktueller Gerätestatus{tail}: {raw}"
 
     if "licht" in lower and "wohnzimmer" in lower:
         action = "on" if re.search(r"\b(an|ein)\b", lower) else "off"
@@ -50,10 +57,10 @@ async def fallback_reply(user_text: str) -> str:
             "control_smart_device",
             {"device_id": "living_room_light", "action": action},
         )
-        return f"Erledigt, {title}. {raw}"
+        return f"Erledigt{tail}. {raw}"
 
     return (
-        f"Entschuldigung, {title}. Für freie Konversation benötige ich einen "
+        f"Entschuldigung{tail}. Für freie Konversation benötige ich einen "
         "OPENAI_API_KEY in der `.env`. Bis dahin verstehe ich Uhrzeit, Wetter, "
         "Geräteliste und „Wohnzimmer Licht an/aus“."
     )

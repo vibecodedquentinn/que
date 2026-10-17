@@ -1,12 +1,12 @@
 services:
-  jarvis:
+  juergen:
     build: .
     ports:
       - "8080:8000"
     env_file:
       - .env
     volumes:
-      - jarvis-data:/app/data
+      - juergen-data:/app/data
     restart: unless-stopped
 
   caddy:
@@ -18,8 +18,8 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
     depends_on:
-      - jarvis
+      - juergen
     restart: unless-stopped
 
 volumes:
-  jarvis-data:
+  juergen-data:

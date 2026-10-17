@@ -84,6 +84,13 @@ body {
   font-size: 0.95rem;
 }
 
+.subtitle.acronym {
+  color: rgba(61, 231, 255, 0.75);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  max-width: 36rem;
+}
+
 .top-actions {
   display: flex;
   align-items: center;

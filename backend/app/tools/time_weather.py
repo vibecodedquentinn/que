@@ -30,7 +30,7 @@ async def get_weather(location: str) -> str:
     url = f"https://wttr.in/{location}?format=j1"
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(url, headers={"User-Agent": "JARVIS-Home/1.0"})
+            resp = await client.get(url, headers={"User-Agent": "JUERGEN-Home/1.0"})
             resp.raise_for_status()
             data = resp.json()
     except Exception as exc:

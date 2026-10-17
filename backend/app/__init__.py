@@ -1,1 +1,1 @@
-"""JARVIS Home backend."""
+"""J.Ü.R.G.E.N. Home backend."""

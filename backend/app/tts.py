@@ -75,7 +75,13 @@ async def _elevenlabs(text: str) -> tuple[bytes, str]:
     payload = {
         "text": text,
         "model_id": settings.elevenlabs_model,
-        "voice_settings": {"stability": 0.45, "similarity_boost": 0.8},
+        "language_code": "de",
+        "voice_settings": {
+            "stability": 0.55,
+            "similarity_boost": 0.75,
+            "style": 0.15,
+            "use_speaker_boost": True,
+        },
     }
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:

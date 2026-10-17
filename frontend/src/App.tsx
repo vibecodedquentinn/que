@@ -3,9 +3,9 @@ import { ArcReactor } from "./components/ArcReactor";
 import { DevicePanel } from "./components/DevicePanel";
 import { InstallBanner } from "./components/InstallBanner";
 import { SecureContextHint } from "./components/SecureContextHint";
-import { useJarvisSocket } from "./hooks/useJarvisSocket";
+import { useAssistantSocket } from "./hooks/useAssistantSocket";
 import { useSpeech } from "./hooks/useSpeech";
-import type { ChatMessage, Device, JarvisStatus, WsEvent } from "./types";
+import type { AssistantStatus, ChatMessage, Device, WsEvent } from "./types";
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -14,7 +14,7 @@ function uid() {
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [status, setStatus] = useState<JarvisStatus | null>(null);
+  const [status, setStatus] = useState<AssistantStatus | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [deviceBusy, setDeviceBusy] = useState<string | null>(null);
   const [toolActivity, setToolActivity] = useState<string | null>(null);
@@ -172,7 +172,11 @@ export default function App() {
         <div className="brand">
           <ArcReactor active={connected} listening={listening || !!toolActivity} />
           <div>
-            <h1>{status?.name ?? "J.A.R.V.I.S."}</h1>
+            <h1>{status?.name ?? "J.Ü.R.G.E.N."}</h1>
+            <p className="subtitle acronym">
+              {status?.acronym ??
+                "Intelligentes Überwachungs-Routine-Gebäude-Energie-Netzwerk"}
+            </p>
             <p className="subtitle">
               {connected ? "Systeme online" : "Verbindung wird aufgebaut…"}
               {!status?.llm_configured && " · Demo-KI (OPENAI_API_KEY fehlt)"}
@@ -194,7 +198,7 @@ export default function App() {
             className={`btn ${wakeEnabled ? "active" : ""}`}
             onClick={() => toggleWake((t) => onSend(t))}
             disabled={!supported}
-            title={supported ? "Wake: Hey JARVIS" : "Sprache nicht verfügbar"}
+            title={supported ? "Wake: Hey Jürgen" : "Sprache nicht verfügbar"}
           >
             Wake
           </button>
@@ -209,7 +213,7 @@ export default function App() {
           <div className="chat-log">
             {messages.length === 0 && (
               <div className="empty-state">
-                <p>Tippe oder halte das Mikro — JARVIS hört auf dem iPad im Browser.</p>
+                <p>Tippe oder halte das Mikro — Jürgen hört auf dem iPad im Browser.</p>
                 <ul>
                   <li>Wie spät ist es?</li>
                   <li>Wetter in München</li>
@@ -220,7 +224,7 @@ export default function App() {
             )}
             {messages.map((m) => (
               <article key={m.id} className={`bubble ${m.role}`}>
-                <span className="role-label">{m.role === "user" ? "Du" : "JARVIS"}</span>
+                <span className="role-label">{m.role === "user" ? "Du" : "Jürgen"}</span>
                 <p>{m.content || (m.streaming ? "…" : "")}</p>
               </article>
             ))}

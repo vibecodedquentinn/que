@@ -7,7 +7,7 @@ function wsUrl(): string {
   return `${proto}//${host}/ws/chat`;
 }
 
-export function useJarvisSocket(
+export function useAssistantSocket(
   onEvent: (event: WsEvent) => void,
 ): {
   connected: boolean;

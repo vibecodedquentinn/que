@@ -21,8 +21,9 @@ export interface Device {
   entity_id?: string;
 }
 
-export interface JarvisStatus {
+export interface AssistantStatus {
   name: string;
+  acronym: string;
   llm_configured: boolean;
   model: string;
   language: string;

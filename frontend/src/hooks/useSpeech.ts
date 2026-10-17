@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { JarvisStatus } from "../types";
+import type { AssistantStatus } from "../types";
 
 type SpeechRecognitionCtor = new () => SpeechRecognition;
 
@@ -13,7 +13,33 @@ function getRecognition(): SpeechRecognition | null {
   return Ctor ? new Ctor() : null;
 }
 
-export function useSpeech(lang = "de-DE", status: JarvisStatus | null) {
+function pickGermanVoice(): SpeechSynthesisVoice | undefined {
+  const voices = window.speechSynthesis.getVoices();
+  const score = (v: SpeechSynthesisVoice): number => {
+    let s = 0;
+    if (!v.lang.toLowerCase().startsWith("de")) return -1;
+    if (/thorsten|hans|markus|stefan|michael|google deutsch/i.test(v.name)) s += 4;
+    if (/male|männlich/i.test(v.name)) s += 3;
+    if (/premium|enhanced|natural/i.test(v.name)) s += 1;
+    if (v.localService) s += 1;
+    return s;
+  };
+  return voices
+    .map((v) => ({ v, s: score(v) }))
+    .filter((x) => x.s >= 0)
+    .sort((a, b) => b.s - a.s)[0]?.v;
+}
+
+function normalizeWake(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/ü/g, "u")
+    .replace(/ä/g, "a")
+    .replace(/ö/g, "o")
+    .replace(/ß/g, "ss");
+}
+
+export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const [wakeEnabled, setWakeEnabled] = useState(false);
@@ -25,6 +51,10 @@ export function useSpeech(lang = "de-DE", status: JarvisStatus | null) {
 
   useEffect(() => {
     setSupported(!!getRecognition());
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
   }, []);
 
   const stop = useCallback(() => {
@@ -38,40 +68,39 @@ export function useSpeech(lang = "de-DE", status: JarvisStatus | null) {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang;
-      u.rate = 1.02;
-      u.pitch = 0.95;
-      const voices = window.speechSynthesis.getVoices();
-      const preferred =
-        voices.find((v) => v.lang.startsWith("de") && /Anna|Google|Premium/i.test(v.name)) ||
-        voices.find((v) => v.lang.startsWith("de")) ||
-        voices[0];
+      u.rate = 0.96;
+      u.pitch = 0.88;
+      const preferred = pickGermanVoice();
       if (preferred) u.voice = preferred;
       window.speechSynthesis.speak(u);
     },
     [lang],
   );
 
-  const speakServer = useCallback(async (text: string) => {
-    const res = await fetch("/api/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    if (!res.ok) {
-      speakBrowser(text);
-      return;
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      URL.revokeObjectURL(audioRef.current.src);
-    }
-    const audio = new Audio(url);
-    audioRef.current = audio;
-    audio.onended = () => URL.revokeObjectURL(url);
-    await audio.play();
-  }, [speakBrowser]);
+  const speakServer = useCallback(
+    async (text: string) => {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) {
+        speakBrowser(text);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
+      }
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => URL.revokeObjectURL(url);
+      await audio.play();
+    },
+    [speakBrowser],
+  );
 
   const speak = useCallback(
     (text: string) => {
@@ -84,6 +113,20 @@ export function useSpeech(lang = "de-DE", status: JarvisStatus | null) {
     },
     [speakBrowser, speakServer, status?.tts_provider],
   );
+
+  const extractAfterWake = (trimmed: string): string | null => {
+    const norm = normalizeWake(trimmed);
+    const triggers = ["hey jürgen", "hey juergen", "jürgen", "juergen"];
+    for (const t of triggers) {
+      const nt = normalizeWake(t);
+      const idx = norm.indexOf(nt);
+      if (idx >= 0) {
+        const after = trimmed.slice(idx + t.length).trim();
+        return after.length > 1 ? after : null;
+      }
+    }
+    return null;
+  };
 
   const startListening = useCallback(
     (onFinal: (text: string) => void, continuous = false) => {
@@ -107,11 +150,8 @@ export function useSpeech(lang = "de-DE", status: JarvisStatus | null) {
         if (!trimmed) return;
 
         if (wakeRef.current && continuous) {
-          const lower = trimmed.toLowerCase();
-          if (lower.includes("jarvis") || lower.includes("hey jarvis")) {
-            const after = trimmed.split(/jarvis/i).pop()?.trim() || "";
-            if (after.length > 2) onResultRef.current(after);
-          }
+          const after = extractAfterWake(trimmed);
+          if (after) onResultRef.current(after);
           return;
         }
 

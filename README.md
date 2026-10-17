@@ -1,82 +1,48 @@
-# J.A.R.V.I.S. Home — Website für iPad & Browser
+# J.Ü.R.G.E.N. — Home-Assistent als Website (iPad)
 
-Eine **einzige Website**, die du auf dem **iPad** (Safari → *Zum Home-Bildschirm*) wie eine App nutzen kannst: Chat, Sprache, Smart Home, Wetter, Erinnerungen.
+**J.Ü.R.G.E.N.** steht für:
 
-## iPad schnell starten (empfohlen)
+**J**ntelligentes **Ü**berwachungs-**R**outine-**G**ebäude-**E**nergie-**N**etzwerk
 
-1. Auf einem Rechner im gleichen WLAN:
+Eine **Website**, die du auf dem **iPad** wie eine App nutzen kannst: Sprache, Chat, Smart Home, Wetter, Erinnerungen. Der Assistent stellt sich als **Jürgen** vor — ruhig, sachlich, professionell.
+
+## iPad schnell starten
 
 ```bash
 cp .env.example .env
-# Optional: OPENAI_API_KEY, Home Assistant, TTS
-
 docker compose build
 docker compose --profile https up -d
 ```
 
-2. Auf dem **iPad** in Safari öffnen:
+Safari: `https://<DEINE-IP>:8443` → **Teilen → Zum Home-Bildschirm**
 
-`https://<DEINE-IP>:8443`
-
-(Caddy nutzt `tls internal` — Safari einmal „Fortfahren“ bestätigen.)
-
-3. **Teilen → Zum Home-Bildschirm** → JARVIS startet im Vollbild.
-
-> **Mikrofon auf dem iPad:** Apple erlaubt Spracheingabe im Browser nur über **HTTPS** (oder localhost). Deshalb der Caddy-Profile `https`.
+> Mikrofon auf dem iPad: nur mit **HTTPS** (Caddy-Profile `https`).
 
 ## Entwicklung
 
 ```bash
-./scripts/dev.sh          # Backend :8000 + Frontend :5173 (Hot Reload)
-./scripts/build-web.sh    # Baut UI nach backend/static — eine URL
-cd backend && uvicorn app.main:app --port 8000   # dann nur :8000
+./scripts/dev.sh
+./scripts/build-web.sh && ./scripts/serve-web.sh   # eine URL :8080
 ```
+
+## Stimme
+
+| Modus | Beschreibung |
+|--------|----------------|
+| `browser` | Kostenlos; bevorzugt deutsche Männerstimmen (Thorsten/Hans/Markus), tieferer Ton |
+| `elevenlabs` | Standard: **Daniel** (`onwK4e9ZLuTAKqWW03F9`) — ruhig, professionell, Deutsch |
+| `piper` | **Thorsten** (`de_DE-thorsten-high`) über eigenen Piper-HTTP-Server |
 
 ## Konfiguration
 
 | Variable | Zweck |
 |----------|--------|
-| `OPENAI_API_KEY` | Volle KI-Konversation |
-| `OPENAI_BASE_URL` | z. B. `http://localhost:11434/v1` (Ollama) |
+| `ASSISTANT_NAME` / `ASSISTANT_ACRONYM` | Anzeige & KI-Persönlichkeit |
+| `USER_TITLE` | Anrede (z. B. `Max`); leer = höfliches „Sie“ |
+| `OPENAI_API_KEY` | Volle Konversation |
 | `SMART_HOME_PROVIDER` | `mock` oder `homeassistant` |
-| `HOMEASSISTANT_URL` / `HOMEASSISTANT_TOKEN` | Long-Lived Token aus HA |
-| `TTS_PROVIDER` | `browser` (iPad), `elevenlabs`, `piper` |
-| `PUBLIC_URL` | Anzeige/Hinweise für deine LAN-URL |
 
-### Home Assistant
-
-1. Profil → Long-Lived Access Tokens → Token erstellen  
-2. In `.env`: `SMART_HOME_PROVIDER=homeassistant`, URL + Token setzen  
-3. Geräte erscheinen live; KI nutzt `entity_id` (z. B. `light.wohnzimmer`)
-
-### Stimme
-
-- **browser** — kostenlos, auf dem iPad sofort (Sprachausgabe-Toggle)
-- **elevenlabs** — `TTS_PROVIDER=elevenlabs` + API-Key
-- **piper** — eigener Piper-HTTP-Server, `PIPER_URL=...` (Wyoming/Piper-Container optional via `docker compose --profile piper`)
-
-## Architektur
-
-```
-iPad Safari (PWA)
-       │
-       ▼
-  Caddy :8443 HTTPS  ──optional──
-       │
-       ▼
-  FastAPI :8000  ── /api, /ws, statische Website (React)
-       ├── LLM + Tools
-       ├── Home Assistant REST
-       └── SQLite + JSON-Daten
-```
-
-## Features
-
-- PWA (offline Shell, App-Icon)
-- Touch-optimiertes UI, Safe Areas
-- WebSocket-Chat, Streaming
-- Gerätepanel antippen zum Schalten
-- Demo-Modus ohne API-Key
+Wake-Phrase: **„Hey Jürgen“**
 
 ## Lizenz
 
