@@ -10,7 +10,30 @@ from app.config import settings
 from app.fallback import fallback_reply
 from app.memory import append_message, get_recent_messages
 from app.prompts import system_prompt
+from app.intent_router import route_intent
 from app.quick_replies import try_quick_reply
+from app.response_style import (
+    control_reply,
+    devices_reply,
+    parse_json,
+    time_reply,
+    weather_reply,
+)
+
+
+def _format_tool_turn(tool_name: str, raw_result: str) -> str | None:
+    data = parse_json(raw_result)
+    match tool_name:
+        case "get_datetime":
+            return time_reply(data)
+        case "get_weather":
+            return weather_reply(data, data.get("location", ""))
+        case "list_smart_devices":
+            return devices_reply(data)
+        case "control_smart_device":
+            return control_reply(data)
+        case _:
+            return None
 from app.tools import TOOL_DEFINITIONS, run_tool
 
 MAX_TOOL_ROUNDS = 6
@@ -38,6 +61,13 @@ async def chat_once(session_id: str, user_message: str) -> str:
 
 async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[str, Any]]:
     await append_message(session_id, "user", user_message)
+
+    routed = await route_intent(user_message)
+    if routed:
+        await append_message(session_id, "assistant", routed)
+        yield {"type": "text", "content": routed}
+        yield {"type": "done"}
+        return
 
     quick = await try_quick_reply(user_message)
     if quick:
@@ -118,12 +148,16 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[
                 if assistant_text:
                     await append_message(session_id, "assistant", assistant_text)
 
+                last_result = ""
+                last_name = ""
                 for t in ordered:
                     yield {
                         "type": "tool_start",
                         "name": t["name"],
                     }
                     result = await run_tool(t["name"], t["arguments"] or "{}")
+                    last_name = t["name"]
+                    last_result = result
                     yield {"type": "tool_end", "name": t["name"], "result": result}
                     messages.append(
                         {
@@ -133,6 +167,12 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[
                         }
                     )
                 assistant_text = ""
+                formatted = _format_tool_turn(last_name, last_result)
+                if formatted:
+                    await append_message(session_id, "assistant", formatted)
+                    yield {"type": "text", "content": formatted}
+                    yield {"type": "done"}
+                    return
                 break
 
             if choice.finish_reason == "stop":

@@ -41,8 +41,8 @@ async def try_quick_reply(user_text: str) -> str | None:
     # „Jürgen“, „Hallo Jürgen“, „Hey Jürgen“, nur Begrüßung
     if has_name and (has_greeting or len(words) <= 2):
         return (
-            f"{_address_prefix()} Hier ist Jürgen, {settings.assistant_name}. "
-            "Systeme sind online. Wobei darf ich helfen?"
+            f"{_address_prefix()} Jürgen meldet sich — alles läuft, "
+            "Uhrzeit, Wetter und Licht sind an meiner Leine. Was brauchen Sie?"
         )
 
     if n in name_tokens or (len(words) == 1 and words[0] in name_tokens):
