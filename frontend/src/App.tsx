@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { JuergenHologram } from "./components/JuergenHologram";
 import { DevicePanel } from "./components/DevicePanel";
 import { InstallBanner } from "./components/InstallBanner";
 import { SecureContextHint } from "./components/SecureContextHint";
 import { VoiceDock } from "./components/VoiceDock";
+import { VoiceHologramButton } from "./components/VoiceHologramButton";
 import { useAssistantSocket } from "./hooks/useAssistantSocket";
 import { useSpeech } from "./hooks/useSpeech";
 import type { AssistantStatus, ChatMessage, Device, WsEvent } from "./types";
@@ -19,6 +19,7 @@ export default function App() {
   const [deviceBusy, setDeviceBusy] = useState<string | null>(null);
   const [toolActivity, setToolActivity] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [showDevices, setShowDevices] = useState(false);
   const streamIdRef = useRef<string | null>(null);
   const assistantBufferRef = useRef("");
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -161,20 +162,18 @@ export default function App() {
     [refreshDevices],
   );
 
-  const handleVoiceStart = () => {
+  const handleVoiceToggle = () => {
+    if (voiceSession) {
+      pendingResumeRef.current = false;
+      endVoiceSession();
+      return;
+    }
     void (async () => {
       unlockAudio();
       await primeAudio();
       startVoiceSession(onSend);
-      await speakAsync(
-        "Sprachsteuerung aktiv. Hier ist Jürgen. Wie kann ich helfen?",
-      );
+      await speakAsync("Hier ist Jürgen. Wie kann ich helfen?");
     })();
-  };
-
-  const handleVoiceStop = () => {
-    pendingResumeRef.current = false;
-    endVoiceSession();
   };
 
   const handleReset = () => {
@@ -183,99 +182,80 @@ export default function App() {
     if (voiceSession) resumeListening();
   };
 
-  const haLabel =
-    status?.smart_home_provider === "homeassistant"
-      ? status.homeassistant_connected
-        ? " · Home Assistant verbunden"
-        : " · Home Assistant offline"
-      : " · Nur Sprache";
+  let hint = "Auf Jürgen tippen — dann sprechen";
+  if (!supported) hint = "Spracheingabe wird in diesem Browser nicht unterstützt";
+  else if (!connected) hint = "Verbindung wird aufgebaut…";
+  else if (ttsError) hint = `Stimme: ${ttsError}`;
+  else if (speaking) hint = "Jürgen spricht…";
+  else if (processing) hint = "Jürgen denkt…";
+  else if (listening) hint = "Sag z. B. „Wie spät ist es?“ oder „Wetter in Berlin“";
+  else if (voiceSession) hint = "Nochmal tippen zum Beenden";
+
+  const visibleMessages = messages.slice(-6);
 
   return (
-    <div className="app voice-only">
+    <div className="app voice-only ipad-shell">
       <div className="grid-bg" aria-hidden />
       <InstallBanner />
       <SecureContextHint />
-      <header className="top-bar">
-        <div className="brand">
-          <JuergenHologram
-            variant="compact"
-            online={connected}
-            active={voiceSession}
-            listening={listening}
-            speaking={speaking}
-            processing={processing || !!toolActivity}
-          />
-          <div>
-            <h1>{status?.name ?? "J.Ü.R.G.E.N."}</h1>
-            <p className="subtitle acronym">
-              {status?.acronym ??
-                "Joint Überwachungs-Regelungs-Gebäude-Energie-Navigator"}
-            </p>
-            <p className="subtitle">
-              {voiceSession ? "Sprachmodus aktiv" : "Sprachmodus bereit"}
-              {connected ? " · online" : " · verbinden…"}
-              {haLabel}
-            </p>
-          </div>
+      <header className="top-bar top-bar--compact">
+        <div className="brand brand--text">
+          <h1>{status?.name ?? "J.Ü.R.G.E.N."}</h1>
+          <p className="subtitle status-line">
+            <span className={`dot ${connected ? "on" : ""}`} aria-hidden />
+            {connected ? "Online" : "Verbinden…"}
+            {voiceSession ? " · Sprache an" : ""}
+          </p>
         </div>
         <div className="top-actions">
-          <button type="button" className="btn ghost" onClick={handleReset}>
+          <button
+            type="button"
+            className="btn ghost small"
+            onClick={() => setShowDevices((v) => !v)}
+          >
+            Geräte
+          </button>
+          <button type="button" className="btn ghost small" onClick={handleReset}>
             Reset
           </button>
         </div>
       </header>
 
-      <main className="layout voice-layout">
-        <section className="panel chat-panel">
-          <div className="juergen-face-stage">
-            <JuergenHologram
-              variant="stage"
-              online={connected}
-              active={voiceSession}
-              listening={listening}
-              speaking={speaking}
-              processing={processing || !!toolActivity}
-            />
-            <p className="juergen-face-label">Jürgen</p>
-          </div>
+      <main className="ipad-main">
+        <VoiceHologramButton
+          active={voiceSession}
+          listening={listening}
+          speaking={speaking}
+          processing={processing || !!toolActivity}
+          connected={connected}
+          supported={supported}
+          onPress={handleVoiceToggle}
+        />
+
+        <VoiceDock hint={hint} />
+
+        <section className="chat-strip panel">
           <div className="chat-log">
-            {messages.length === 0 && (
-              <div className="empty-state">
-                <p>Kein Tippen nötig.</p>
-                <p>Tippe unten auf <strong>Start</strong>, dann sprich mit Jürgen.</p>
-                <ul>
-                  <li>„Hallo Jürgen“</li>
-                  <li>„Wie spät ist es?“</li>
-                  <li>„Wetter in Berlin“</li>
-                </ul>
-              </div>
+            {visibleMessages.length === 0 && (
+              <p className="empty-state compact">
+                Kein Tippen — nur die Kugel antippen und sprechen.
+              </p>
             )}
-            {messages.map((m) => (
-              <article key={m.id} className={`bubble ${m.role}`}>
-                <span className="role-label">{m.role === "user" ? "Du" : "Jürgen"}</span>
+            {visibleMessages.map((m) => (
+              <article key={m.id} className={`bubble ${m.role} compact`}>
                 <p>{m.content || (m.streaming ? "…" : "")}</p>
               </article>
             ))}
-            {toolActivity && <p className="tool-hint">Tool: {toolActivity} …</p>}
+            {toolActivity && <p className="tool-hint">… {toolActivity}</p>}
             <div ref={chatEndRef} />
           </div>
-
-          <VoiceDock
-            active={voiceSession}
-            listening={listening}
-            speaking={speaking}
-            processing={processing}
-            connected={connected}
-            supported={supported}
-            ttsError={ttsError}
-            onStart={handleVoiceStart}
-            onStop={handleVoiceStop}
-          />
         </section>
 
-        <aside className="side side-compact">
-          <DevicePanel devices={devices} onToggle={toggleDevice} busyId={deviceBusy} />
-        </aside>
+        {showDevices && (
+          <aside className="side-drawer panel">
+            <DevicePanel devices={devices} onToggle={toggleDevice} busyId={deviceBusy} />
+          </aside>
+        )}
       </main>
     </div>
   );

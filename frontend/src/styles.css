@@ -22,6 +22,7 @@ html,
 body,
 #root {
   height: 100%;
+  height: 100dvh;
   margin: 0;
 }
 
@@ -39,8 +40,15 @@ body {
 
 .app {
   min-height: 100%;
+  min-height: 100dvh;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ipad-shell {
+  max-height: 100dvh;
 }
 
 .grid-bg {
@@ -64,6 +72,34 @@ body {
   backdrop-filter: blur(8px);
   position: relative;
   z-index: 2;
+  flex-shrink: 0;
+}
+
+.top-bar--compact {
+  padding: 0.65rem 1rem;
+}
+
+.brand--text h1 {
+  font-size: 1.05rem;
+}
+
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem !important;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.dot.on {
+  background: #5dff9a;
+  box-shadow: 0 0 8px rgba(93, 255, 154, 0.6);
 }
 
 .brand {
@@ -100,18 +136,154 @@ body {
   flex-wrap: wrap;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: 1fr min(340px, 32vw);
-  gap: 1rem;
-  padding: 1rem 1.5rem 1.5rem;
+.ipad-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.35rem 0.75rem max(0.5rem, env(safe-area-inset-bottom));
+  gap: 0.35rem;
   position: relative;
   z-index: 1;
+  overflow: hidden;
 }
 
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 1fr;
+.voice-holo-button {
+  flex: 0 0 auto;
+  width: min(82vw, 48dvh, 400px);
+  height: min(82vw, 48dvh, 400px);
+  margin: 0.15rem auto 0;
+  padding: 0;
+  border: 2px solid rgba(255, 149, 0, 0.35);
+  border-radius: 50%;
+  align-self: center;
+  background: radial-gradient(
+    circle at 50% 42%,
+    rgba(255, 140, 0, 0.14),
+    rgba(4, 8, 15, 0.85) 68%
+  );
+  box-shadow:
+    0 0 48px rgba(255, 149, 0, 0.22),
+    inset 0 0 40px rgba(255, 120, 0, 0.08);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.voice-holo-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.voice-holo-button.active {
+  border-color: rgba(255, 180, 80, 0.65);
+}
+
+.voice-holo-button.listen {
+  animation: pulse 1.2s ease-in-out infinite;
+  box-shadow: 0 0 56px rgba(255, 170, 50, 0.45);
+}
+
+.voice-holo-button.speak {
+  box-shadow: 0 0 52px rgba(255, 200, 100, 0.4);
+}
+
+.voice-holo-button.think {
+  box-shadow: 0 0 60px rgba(255, 120, 0, 0.55);
+}
+
+.voice-holo-button__sphere {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.voice-holo-button__caption {
+  position: absolute;
+  bottom: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 200, 120, 0.95);
+  background: rgba(4, 8, 15, 0.75);
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 149, 0, 0.35);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.voice-dock--hint-only {
+  border: none;
+  padding: 0 0.5rem;
+  flex-shrink: 0;
+}
+
+.voice-dock--hint-only .voice-hint {
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.chat-strip {
+  width: 100%;
+  flex: 0 1 auto;
+  max-height: min(28dvh, 220px);
+  min-height: 72px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-strip .chat-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.empty-state.compact {
+  margin: 0;
+  font-size: 0.88rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.bubble.compact {
+  margin-bottom: 0.45rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.95rem;
+}
+
+.bubble.compact .role-label {
+  display: none;
+}
+
+.side-drawer {
+  position: fixed;
+  inset: auto 0 0 0;
+  max-height: 45dvh;
+  z-index: 10;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .voice-holo-button {
+    max-height: min(70dvh, 280px);
+  }
+
+  .chat-strip {
+    max-height: 120px;
   }
 }
 
@@ -126,34 +298,6 @@ body {
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 140px);
-}
-
-.juergen-face-stage {
-  position: relative;
-  flex-shrink: 0;
-  height: min(36vh, 300px);
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid rgba(255, 149, 0, 0.15);
-  background: radial-gradient(
-    ellipse 70% 85% at 50% 45%,
-    rgba(255, 140, 0, 0.12),
-    transparent 65%
-  );
-  overflow: hidden;
-}
-
-.juergen-face-label {
-  margin: -0.5rem 0 0.35rem;
-  font-family: var(--font-display);
-  font-size: 0.72rem;
-  letter-spacing: 0.35em;
-  color: rgba(255, 180, 80, 0.85);
-  text-transform: uppercase;
-  pointer-events: none;
 }
 
 .juergen-hologram {
@@ -182,12 +326,6 @@ body {
 
 .juergen-hologram.is-thinking {
   filter: drop-shadow(0 0 56px rgba(255, 120, 0, 0.75));
-}
-
-.brand .juergen-hologram {
-  width: 56px;
-  height: 56px;
-  filter: drop-shadow(0 0 14px var(--holo-glow));
 }
 
 .chat-log {
@@ -260,6 +398,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
+  width: 100%;
 }
 
 .voice-hint {

@@ -226,6 +226,7 @@ export function JuergenHologram({
         online ? "is-online" : ""
       }`}
       aria-hidden
+      style={{ pointerEvents: "none" }}
     />
   );
 }
