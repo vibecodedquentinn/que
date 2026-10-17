@@ -1,0 +1,36 @@
+# Render Blueprint — Deploy aus GitHub, nichts auf dem Mac
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: juergen
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /api/status
+    envVars:
+      - key: LLM_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: LLM_MODEL
+        value: anthropic/claude-sonnet-4
+      - key: LLM_TEMPERATURE
+        value: "0.35"
+      - key: LLM_API_KEY
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+      - key: ASSISTANT_NAME
+        value: J.Ü.R.G.E.N.
+      - key: DEFAULT_LANGUAGE
+        value: de
+      - key: SMART_HOME_PROVIDER
+        value: mock
+      - key: TTS_PROVIDER
+        value: piper
+      - key: PIPER_VOICE
+        value: de_DE-thorsten-high
+      - key: FRITZBOX_ENABLED
+        value: "false"
+    disk:
+      name: juergen-data
+      mountPath: /app/data
+      sizeGB: 1

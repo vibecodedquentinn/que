@@ -1,0 +1,13 @@
+{
+	email {$ACME_EMAIL:admin@localhost}
+}
+
+{$DOMAIN} {
+	@has_auth expression {env.JUERGEN_BASIC_AUTH_USER} != "" && {env.JUERGEN_BASIC_AUTH_HASH} != ""
+	handle @has_auth {
+		basic_auth {
+			{env.JUERGEN_BASIC_AUTH_USER} {env.JUERGEN_BASIC_AUTH_HASH}
+		}
+	}
+	reverse_proxy juergen:8000
+}
