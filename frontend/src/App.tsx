@@ -23,7 +23,7 @@ export default function App() {
   const assistantBufferRef = useRef("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const { supported, listening, wakeEnabled, speak, startListening, stop, toggleWake } =
+  const { supported, listening, wakeEnabled, speak, unlockAudio, startListening, stop, toggleWake } =
     useSpeech("de-DE", status);
 
   const refreshDevices = useCallback(async () => {
@@ -144,16 +144,22 @@ export default function App() {
 
   const handleForm = (e: React.FormEvent) => {
     e.preventDefault();
+    unlockAudio();
     onSend(input);
     setInput("");
   };
 
   const handleMic = () => {
+    unlockAudio();
     if (listening) {
       stop();
       return;
     }
     startListening((text) => onSend(text), false);
+  };
+
+  const handleSendClick = () => {
+    unlockAudio();
   };
 
   const haLabel =
@@ -249,7 +255,12 @@ export default function App() {
               autoComplete="off"
               enterKeyHint="send"
             />
-            <button type="submit" className="btn primary" disabled={!connected}>
+            <button
+              type="submit"
+              className="btn primary"
+              disabled={!connected}
+              onClick={handleSendClick}
+            >
               Senden
             </button>
           </form>

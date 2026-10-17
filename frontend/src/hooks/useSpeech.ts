@@ -95,6 +95,7 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
         URL.revokeObjectURL(audioRef.current.src);
       }
       const audio = new Audio(url);
+      audio.setAttribute("playsinline", "true");
       audioRef.current = audio;
       audio.onended = () => URL.revokeObjectURL(url);
       await audio.play();
@@ -105,7 +106,12 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
   const speak = useCallback(
     (text: string) => {
       const provider = status?.tts_provider ?? "browser";
-      if (provider === "piper" || provider === "elevenlabs") {
+      if (
+        provider === "gtts" ||
+        provider === "edge" ||
+        provider === "piper" ||
+        provider === "elevenlabs"
+      ) {
         void speakServer(text);
       } else {
         speakBrowser(text);
@@ -113,6 +119,19 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
     },
     [speakBrowser, speakServer, status?.tts_provider],
   );
+
+  const unlockedRef = useRef(false);
+  const unlockAudio = useCallback(() => {
+    if (unlockedRef.current) return;
+    unlockedRef.current = true;
+    const Ctx =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (Ctx) {
+      const ctx = new Ctx();
+      void ctx.resume();
+    }
+  }, []);
 
   const extractAfterWake = (trimmed: string): string | null => {
     const norm = normalizeWake(trimmed);
@@ -203,6 +222,7 @@ export function useSpeech(lang = "de-DE", status: AssistantStatus | null) {
     listening,
     wakeEnabled,
     speak,
+    unlockAudio,
     startListening,
     stop,
     toggleWake,

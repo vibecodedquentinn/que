@@ -27,7 +27,9 @@ class Settings(BaseSettings):
     homeassistant_url: str | None = None
     homeassistant_token: str | None = None
 
-    tts_provider: str = "browser"  # browser | piper | elevenlabs
+    tts_provider: str = "gtts"  # gtts | edge | browser | piper | elevenlabs
+    edge_tts_voice: str = "de-DE-ConradNeural"
+    gtts_lang: str = "de"
     piper_url: str | None = None
     piper_voice: str = "de_DE-thorsten-high"
     elevenlabs_api_key: str | None = None

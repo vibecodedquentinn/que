@@ -10,6 +10,7 @@ from app.config import settings
 from app.fallback import fallback_reply
 from app.memory import append_message, get_recent_messages
 from app.prompts import system_prompt
+from app.quick_replies import try_quick_reply
 from app.tools import TOOL_DEFINITIONS, run_tool
 
 MAX_TOOL_ROUNDS = 6
@@ -37,6 +38,13 @@ async def chat_once(session_id: str, user_message: str) -> str:
 
 async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[str, Any]]:
     await append_message(session_id, "user", user_message)
+
+    quick = await try_quick_reply(user_message)
+    if quick:
+        await append_message(session_id, "assistant", quick)
+        yield {"type": "text", "content": quick}
+        yield {"type": "done"}
+        return
 
     client = _client()
     if client is None:
@@ -129,6 +137,11 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[
 
             if choice.finish_reason == "stop":
                 final = assistant_text.strip()
+                if not final:
+                    fb = await fallback_reply(user_message)
+                    if fb:
+                        final = fb
+                        yield {"type": "text", "content": fb}
                 if final:
                     await append_message(session_id, "assistant", final)
                 yield {"type": "done"}
