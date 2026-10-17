@@ -12,28 +12,7 @@ from app.memory import append_message, get_recent_messages
 from app.prompts import system_prompt
 from app.intent_router import route_intent
 from app.quick_replies import try_quick_reply
-from app.response_style import (
-    control_reply,
-    devices_reply,
-    parse_json,
-    time_reply,
-    weather_reply,
-)
-
-
-def _format_tool_turn(tool_name: str, raw_result: str) -> str | None:
-    data = parse_json(raw_result)
-    match tool_name:
-        case "get_datetime":
-            return time_reply(data)
-        case "get_weather":
-            return weather_reply(data, data.get("location", ""))
-        case "list_smart_devices":
-            return devices_reply(data)
-        case "control_smart_device":
-            return control_reply(data)
-        case _:
-            return None
+from app.response_style import format_tool_turn
 from app.tools import TOOL_DEFINITIONS, run_tool
 
 MAX_TOOL_ROUNDS = 6
@@ -47,6 +26,41 @@ def _client() -> AsyncOpenAI | None:
         api_key=api_key,
         base_url=settings.effective_llm_base_url or None,
     )
+
+
+def _llm_kwargs() -> dict[str, Any]:
+    kw: dict[str, Any] = {
+        "temperature": settings.llm_temperature,
+    }
+    if settings.llm_max_tokens:
+        kw["max_tokens"] = settings.llm_max_tokens
+    return kw
+
+
+async def _synthesize_from_tool(
+    client: AsyncOpenAI,
+    user_message: str,
+    tool_name: str,
+    tool_result: str,
+) -> str:
+    prompt = (
+        "Formuliere die Antwort für den Nutzer in 1–3 Sätzen auf Deutsch, "
+        "Jürgen-Stil (ruhig, trocken, präzise). Nur Fakten aus dem Tool-Ergebnis."
+    )
+    resp = await client.chat.completions.create(
+        model=settings.effective_llm_model,
+        messages=[
+            {"role": "system", "content": prompt},
+            {
+                "role": "user",
+                "content": f"Nutzer: {user_message}\nTool: {tool_name}\nErgebnis:\n{tool_result}",
+            },
+        ],
+        stream=False,
+        **_llm_kwargs(),
+    )
+    text = (resp.choices[0].message.content or "").strip()
+    return text or "Erledigt."
 
 
 async def chat_once(session_id: str, user_message: str) -> str:
@@ -97,6 +111,7 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[
             tools=TOOL_DEFINITIONS,
             tool_choice="auto",
             stream=True,
+            **_llm_kwargs(),
         )
 
         tool_calls: dict[int, dict[str, Any]] = {}
@@ -150,6 +165,7 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[
 
                 last_result = ""
                 last_name = ""
+                guest_action = ""
                 for t in ordered:
                     yield {
                         "type": "tool_start",
@@ -158,6 +174,12 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[
                     result = await run_tool(t["name"], t["arguments"] or "{}")
                     last_name = t["name"]
                     last_result = result
+                    if last_name == "fritz_guest_wifi":
+                        try:
+                            args = json.loads(t["arguments"] or "{}")
+                            guest_action = args.get("action", "on")
+                        except json.JSONDecodeError:
+                            guest_action = "on"
                     yield {"type": "tool_end", "name": t["name"], "result": result}
                     messages.append(
                         {
@@ -166,14 +188,18 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict[
                             "content": result,
                         }
                     )
-                assistant_text = ""
-                formatted = _format_tool_turn(last_name, last_result)
-                if formatted:
-                    await append_message(session_id, "assistant", formatted)
-                    yield {"type": "text", "content": formatted}
-                    yield {"type": "done"}
-                    return
-                break
+
+                formatted = format_tool_turn(
+                    last_name, last_result, guest_action=guest_action
+                )
+                if not formatted:
+                    formatted = await _synthesize_from_tool(
+                        client, user_message, last_name, last_result
+                    )
+                await append_message(session_id, "assistant", formatted)
+                yield {"type": "text", "content": formatted}
+                yield {"type": "done"}
+                return
 
             if choice.finish_reason == "stop":
                 final = assistant_text.strip()

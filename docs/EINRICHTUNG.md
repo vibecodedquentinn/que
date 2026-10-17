@@ -38,7 +38,7 @@ Den **https://….trycloudflare.com** Link auf dem iPad öffnen — Mikrofon fun
 ## Was `./start` macht
 
 1. Baut das Docker-Image (Website + Backend)
-2. Startet **Ollama** und lädt **llama3.2:1b** (klein, schnell)
+2. Startet **Ollama** und lädt **qwen2.5:7b** (schlauer für Deutsch & Befehle)
 3. Startet **Jürgen** mit LLM-Anbindung (kein OpenAI, kein Cursor API)
 4. Startet **Caddy** für HTTPS auf Port **8443**
 

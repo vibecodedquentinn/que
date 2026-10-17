@@ -27,7 +27,6 @@ _TIME_TAIL = [
 
 def time_reply(data: dict) -> str:
     formatted = data.get("formatted", "unbekannt")
-    tz = data.get("timezone", "Europe/Berlin")
     tail = random.choice(_TIME_TAIL)
     return f"{formatted}{_anrede_suffix()}. {tail}"
 
@@ -71,7 +70,7 @@ def control_reply(data: dict) -> str:
 
 def fritz_hosts_reply(data: dict) -> str:
     if "error" in data:
-        return f"Fritz!Box{ _anrede_suffix()}: {data['error']}"
+        return f"Fritz!Box{_anrede_suffix()}: {data['error']}"
     active = data.get("active_hosts") or []
     if not active:
         return f"Am Router sehe ich gerade keine aktiven Geräte{_anrede_suffix()}."
@@ -101,18 +100,84 @@ def fritz_wan_reply(data: dict) -> str:
 
 def fritz_guest_reply(data: dict, action: str) -> str:
     if "error" in data:
-        return f"Gast-WLAN{ _anrede_suffix()}: {data['error']}"
+        return f"Gast-WLAN{_anrede_suffix()}: {data['error']}"
     state = "an" if data.get("enabled") else "aus"
     ssid = data.get("ssid") or "Gast-WLAN"
     return f"Gast-WLAN „{ssid}“ ist {state}{_anrede_suffix()}."
+
+
+def reminder_added_reply(data: dict) -> str:
+    if "error" in data:
+        return f"Erinnerung nicht gespeichert{_anrede_suffix()}: {data['error']}"
+    r = data.get("reminder", {})
+    text = r.get("text", "")
+    due = r.get("due_at") or ""
+    extra = f" Termin: {due}." if due.strip() else ""
+    return f"Notiert{_anrede_suffix()}: {text}.{extra}"
+
+
+def reminders_list_reply(data: dict) -> str:
+    items = data.get("reminders") or []
+    if not items:
+        return f"Keine offenen Erinnerungen{_anrede_suffix()}."
+    lines = [f"• {r.get('text', '?')}" for r in items[:6]]
+    more = len(items) - 6
+    tail = f" … und {more} weitere." if more > 0 else ""
+    return f"Offene Erinnerungen{_anrede_suffix()}: " + " ".join(lines) + tail
+
+
+def note_saved_reply(data: dict) -> str:
+    if "error" in data:
+        return f"Notiz nicht gespeichert{_anrede_suffix()}: {data['error']}"
+    note = data.get("note", {})
+    title = note.get("title") or "Notiz"
+    return f"Gespeichert{_anrede_suffix()}: {title}."
+
+
+def notes_search_reply(data: dict) -> str:
+    notes = data.get("notes") or []
+    if not notes:
+        return f"Dazu habe ich keine Notiz gefunden{_anrede_suffix()}."
+    first = notes[0]
+    body = (first.get("body") or "")[:120]
+    return f"Gefunden{_anrede_suffix()}: {first.get('title', 'Notiz')} — {body}"
 
 
 def identity_reply() -> str:
     return (
         f"Ich bin Jürgen — {settings.assistant_name}, {settings.assistant_acronym}. "
         f"Ihr Haus-Navigator: ruhig, präzise, mit trockenem Humor{_anrede_suffix()}. "
-        "Fragen Sie nach Uhrzeit, Wetter, Geräten oder sagen Sie, was ich schalten soll."
+        "Fragen Sie nach Uhrzeit, Wetter, Geräten, Fritz!Box oder sagen Sie, was ich schalten soll."
     )
+
+
+def format_tool_turn(tool_name: str, raw_result: str, *, guest_action: str = "") -> str | None:
+    data = parse_json(raw_result)
+    match tool_name:
+        case "get_datetime":
+            return time_reply(data)
+        case "get_weather":
+            return weather_reply(data, data.get("location", ""))
+        case "list_smart_devices":
+            return devices_reply(data)
+        case "control_smart_device":
+            return control_reply(data)
+        case "fritz_list_hosts":
+            return fritz_hosts_reply(data)
+        case "fritz_internet_status":
+            return fritz_wan_reply(data)
+        case "fritz_guest_wifi":
+            return fritz_guest_reply(data, guest_action or "on")
+        case "add_reminder":
+            return reminder_added_reply(data)
+        case "list_reminders":
+            return reminders_list_reply(data)
+        case "save_note":
+            return note_saved_reply(data)
+        case "search_notes":
+            return notes_search_reply(data)
+        case _:
+            return None
 
 
 def parse_json(raw: str) -> dict:
