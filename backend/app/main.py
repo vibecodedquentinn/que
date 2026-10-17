@@ -93,7 +93,7 @@ async def status() -> StatusResponse:
         homeassistant_connected=ha_ok,
         fritzbox_connected=fb_ok,
         tts_provider=settings.tts_provider,
-        public_url=settings.public_url,
+        public_url=settings.effective_public_url,
     )
 
 

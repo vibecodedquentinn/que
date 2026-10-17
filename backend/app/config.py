@@ -1,3 +1,5 @@
+import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,9 +10,10 @@ class Settings(BaseSettings):
     # Legacy-Aliase OPENAI_* werden weiter unterstützt.
     llm_api_key: str | None = None
     llm_base_url: str | None = None
-    llm_model: str = "gpt-4o-mini"
+    llm_model: str = "openai/gpt-4o-mini"
     llm_temperature: float = 0.35
     llm_max_tokens: int | None = 512
+    openrouter_api_key: str | None = None
     openai_api_key: str | None = None
     openai_base_url: str | None = None
     openai_model: str | None = None
@@ -52,11 +55,16 @@ class Settings(BaseSettings):
 
     @property
     def effective_llm_api_key(self) -> str | None:
-        return self.llm_api_key or self.openai_api_key
+        return self.llm_api_key or self.openrouter_api_key or self.openai_api_key
 
     @property
     def effective_llm_base_url(self) -> str | None:
-        return self.llm_base_url or self.openai_base_url
+        if self.llm_base_url or self.openai_base_url:
+            return self.llm_base_url or self.openai_base_url
+        key = self.effective_llm_api_key or ""
+        if key.startswith("sk-or-"):
+            return "https://openrouter.ai/api/v1"
+        return None
 
     @property
     def effective_llm_model(self) -> str:
@@ -88,6 +96,18 @@ class Settings(BaseSettings):
         if self.cors_origins.strip() == "*":
             return ["*"]
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def effective_public_url(self) -> str | None:
+        if self.public_url and self.public_url.strip():
+            return self.public_url.strip()
+        render = os.environ.get("RENDER_EXTERNAL_URL", "").strip()
+        if render:
+            return render
+        fly = os.environ.get("FLY_APP_NAME", "").strip()
+        if fly:
+            return f"https://{fly}.fly.dev"
+        return None
 
     def address(self, *, leading_comma: bool = False) -> str:
         if self.user_title.strip():

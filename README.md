@@ -6,13 +6,7 @@
 
 **Kein Docker auf dem Mac, kein Ollama-Download, kein `./start`.**
 
-| Schritt | Link |
-|--------|------|
-| Komplett-Anleitung | **[docs/CLOUD-NUR.md](docs/CLOUD-NUR.md)** |
-| OpenRouter + Render / Fly / Hetzner | dort beschrieben |
-| Nur Fritz!Box aus der Cloud | [docs/FRITZBOX-CLOUD.md](docs/FRITZBOX-CLOUD.md) |
-
-Kurz: Repo auf **Render** (Blueprint `render.yaml`) oder **Fly** (`fly.toml`) deployen, `LLM_API_KEY` setzen, HTTPS-URL auf dem iPad speichern.
+**[docs/CLOUD-NUR.md](docs/CLOUD-NUR.md)** — Render Blueprint, **nur ein** Secret (`LLM_API_KEY` von OpenRouter), Rest ist vorkonfiguriert.
 
 ---
 

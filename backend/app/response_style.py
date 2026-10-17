@@ -147,7 +147,7 @@ def identity_reply() -> str:
     return (
         f"Ich bin Jürgen — {settings.assistant_name}, {settings.assistant_acronym}. "
         f"Ihr Haus-Navigator: ruhig, präzise, mit trockenem Humor{_anrede_suffix()}. "
-        "Fragen Sie nach Uhrzeit, Wetter, Geräten, Fritz!Box oder sagen Sie, was ich schalten soll."
+        "Fragen Sie nach Uhrzeit, Wetter, Geräten oder sagen Sie, was ich schalten soll."
     )
 
 

@@ -5,7 +5,7 @@ from typing import Any
 
 from app.tools import devices, fritzbox_tools, notes, reminders, time_weather
 
-TOOL_DEFINITIONS: list[dict[str, Any]] = [
+_BASE_TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "type": "function",
         "function": {
@@ -162,6 +162,20 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
 ]
+
+TOOL_DEFINITIONS = _BASE_TOOL_DEFINITIONS
+
+
+def get_tool_definitions() -> list[dict[str, Any]]:
+    from app.integrations import fritzbox as fb
+
+    if fb.configured():
+        return list(_BASE_TOOL_DEFINITIONS)
+    return [
+        t
+        for t in _BASE_TOOL_DEFINITIONS
+        if not t.get("function", {}).get("name", "").startswith("fritz_")
+    ]
 
 
 async def run_tool(name: str, arguments: str | dict[str, Any]) -> str:

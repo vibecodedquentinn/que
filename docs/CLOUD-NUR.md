@@ -1,94 +1,49 @@
-# Alles in der Cloud — nichts lokal
+# Alles in der Cloud — fast zero Setup
 
-**Ziel:** Auf Mac, iPad und zu Hause läuft **kein** Docker, **kein** Ollama, **kein** `./start`.  
-Du nutzt Jürgen nur als **Website** (Safari → Link zum Home-Bildschirm).
-
-| Wo | Was |
-|----|-----|
-| **Cloud-Server** (Render, Fly.io, Hetzner, …) | Jürgen + KI (OpenRouter) + Stimme |
-| **iPad** | Nur Browser/PWA |
-| **Fritz!Box** | VPN vom **Server** ins Heimnetz — [FRITZBOX-CLOUD.md](FRITZBOX-CLOUD.md) |
-| **Dein Mac** | **Nichts** installieren |
+**Mac/iPad:** nur Browser. **Kein** Docker, **kein** Ollama, **keine** Fritz!Box-Konfiguration.
 
 ---
 
-## Schritt 1 — OpenRouter (KI, ~5 Min.)
+## Einmalig (2 Minuten)
 
-1. Konto auf [openrouter.ai](https://openrouter.ai)
-2. API-Key erstellen
-3. Guthaben / Limit setzen (Pay-as-you-go)
+### 1. Render Blueprint
 
-Das ersetzt Ollama komplett — **kein 4,7‑GB-Download** auf deinen Geräten.
+1. [render.com](https://render.com) → **New** → **Blueprint**
+2. Repo **`vibecodedquentinn/que`** verbinden (Branch mit PR oder `main`)
+3. Unter **Environment** **nur einen** Secret setzen:
+   - **`LLM_API_KEY`** = dein [OpenRouter](https://openrouter.ai)-Key (`sk-or-…`)
 
----
+Das war’s. **`PUBLIC_URL`** setzt Render automatisch (`RENDER_EXTERNAL_URL`). Modell & OpenRouter-URL sind im Blueprint vorkonfiguriert.
 
-## Schritt 2 — Hosting wählen (eine Option)
+### 2. iPad
 
-### A) Render (einfach, GitHub, HTTPS inklusive)
-
-1. [render.com](https://render.com) → **New** → **Blueprint** → Repo `que` verbinden  
-2. Render liest `render.yaml` aus dem Repo  
-3. Im Dashboard **Environment** setzen (aus `.env.cloud.example`):
-   - `LLM_API_KEY`, `PUBLIC_URL` (= Render-URL, z. B. `https://juergen.onrender.com`)
-4. **Deploy** — fertig. Link auf dem iPad öffnen.
-
-> Free-Tier schläft nach Inaktivität — für dauerhaft „da“: kleiner Paid Plan.
-
-### B) Fly.io
-
-```bash
-# Einmalig von **jedem** Rechner mit flyctl — oder Fly Dashboard „Deploy from GitHub“
-fly launch --no-deploy
-fly secrets set LLM_API_KEY=sk-or-... LLM_BASE_URL=https://openrouter.ai/api/v1 LLM_MODEL=anthropic/claude-sonnet-4 PUBLIC_URL=https://DEIN-NAME.fly.dev
-fly volumes create juergen_data --size 1
-fly deploy
-```
-
-Danach nur noch iPad — **kein** weiterer Dienst zu Hause.
-
-### C) Hetzner Cloud VPS (volle Kontrolle, Fritz-VPN)
-
-1. CX22 o. ä. bestellen (Ubuntu)  
-2. **Nur auf dem VPS** (SSH in der Hetzner-Konsole, nicht „lokal“ auf dem Mac nötig):
-
-```bash
-git clone https://github.com/vibecodedquentinn/que.git
-cd que
-cp .env.cloud.example .env
-nano .env   # Keys eintragen
-docker compose -f docker-compose.cloud.yml -f docker-compose.cloud.caddy.yml up -d --build
-```
-
-3. Domain → VPS-IP, `PUBLIC_URL` und `DOMAIN` in `.env`  
-4. Fritz: [FRITZBOX-CLOUD.md](FRITZBOX-CLOUD.md) (WireGuard **auf dem VPS**)
+HTTPS-Link von Render öffnen → **Zum Home-Bildschirm** → **Start** (Mikro).
 
 ---
 
-## Schritt 3 — iPad
+## Was schon eingebaut ist
 
-1. **HTTPS-URL** aus dem Hoster öffnen (Render/Fly/Hetzner)  
-2. **Teilen → Zum Home-Bildschirm**  
-3. Einmal **Start** tippen (Mikrofon) — danach nur sprechen  
+| Thema | Status |
+|--------|--------|
+| KI | OpenRouter, Modell `openai/gpt-4o-mini` (schnell & schlau genug) |
+| Schlau ohne LLM | Intent-Router: Uhrzeit, Wetter, Geräte, Follow-ups („Und in Hamburg?“), Erinnerungen |
+| Stimme | Piper Thorsten (Server-TTS) |
+| 3D-Gesicht | Hologramm-Kugel in der UI |
+| Fritz!Box | **Aus** — optional später |
+
+Upgrade Modell (optional in Render): `LLM_MODEL=anthropic/claude-sonnet-4`
+
+---
+
+## Alternativen
+
+- **Fly.io:** `fly.toml` + `fly secrets set LLM_API_KEY=…`
+- **Hetzner VPS:** `docker compose -f docker-compose.cloud.yml up -d --build` + `.env.cloud.example`
 
 ---
 
 ## Sicherheit
 
-- Jürgen hat **kein Login** → Hoster-URL mit **Cloudflare Access**, **Basic Auth** (Caddy), oder Fly/Render private networking absichern  
-- Keys nur im Hoster, nie ins Git  
+URL mit Cloudflare Access oder Basic Auth schützen — Jürgen hat kein Login.
 
----
-
-## Was du **nicht** brauchst
-
-- `./start`, Docker Desktop, Ollama auf dem Mac  
-- `./start --public` (das wäre Jürgen auf **deinem** Rechner)  
-- NAS / Raspberry Pi für die App  
-
-Lokales `./start` ist nur noch für **Entwickler** — siehe `docs/EINRICHTUNG.md`.
-
----
-
-## Check
-
-`https://DEINE-URL/api/status` → `"llm_configured": true`, `"model": "anthropic/claude-sonnet-4"` (oder dein Modell).
+Check: `https://DEINE-URL/api/status` → `llm_configured: true`

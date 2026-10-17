@@ -1,5 +1,4 @@
-# Render Blueprint — Deploy aus GitHub, nichts auf dem Mac
-# https://render.com/docs/blueprint-spec
+# Render Blueprint — ein Secret: LLM_API_KEY (OpenRouter)
 services:
   - type: web
     name: juergen
@@ -11,25 +10,25 @@ services:
       - key: LLM_BASE_URL
         value: https://openrouter.ai/api/v1
       - key: LLM_MODEL
-        value: anthropic/claude-sonnet-4
+        value: openai/gpt-4o-mini
       - key: LLM_TEMPERATURE
         value: "0.35"
       - key: LLM_API_KEY
         sync: false
-      - key: PUBLIC_URL
-        sync: false
       - key: ASSISTANT_NAME
         value: J.Ü.R.G.E.N.
+      - key: USER_TITLE
+        value: Max
       - key: DEFAULT_LANGUAGE
         value: de
       - key: SMART_HOME_PROVIDER
         value: mock
+      - key: FRITZBOX_ENABLED
+        value: "false"
       - key: TTS_PROVIDER
         value: piper
       - key: PIPER_VOICE
         value: de_DE-thorsten-high
-      - key: FRITZBOX_ENABLED
-        value: "false"
     disk:
       name: juergen-data
       mountPath: /app/data
