@@ -69,6 +69,44 @@ def control_reply(data: dict) -> str:
     return f"Erledigt{_anrede_suffix()}. {name} ist jetzt {state}."
 
 
+def fritz_hosts_reply(data: dict) -> str:
+    if "error" in data:
+        return f"Fritz!Box{ _anrede_suffix()}: {data['error']}"
+    active = data.get("active_hosts") or []
+    if not active:
+        return f"Am Router sehe ich gerade keine aktiven Geräte{_anrede_suffix()}."
+    names = [
+        f"{h.get('name', '?')} ({h.get('ip', '?')})"
+        for h in active[:10]
+    ]
+    extra = len(active) - 10
+    tail = f" und {extra} weitere" if extra > 0 else ""
+    return (
+        f"Im Heimnetz sind {len(active)} Geräte aktiv{_anrede_suffix()}: "
+        + ", ".join(names)
+        + tail
+        + "."
+    )
+
+
+def fritz_wan_reply(data: dict) -> str:
+    if "error" in data:
+        return f"Internetstatus nicht verfügbar{_anrede_suffix()}: {data['error']}"
+    status = data.get("connection_status", "unbekannt")
+    ip = data.get("external_ip", "—")
+    return (
+        f"Internet: {status}{_anrede_suffix()}. Externe IP: {ip}."
+    )
+
+
+def fritz_guest_reply(data: dict, action: str) -> str:
+    if "error" in data:
+        return f"Gast-WLAN{ _anrede_suffix()}: {data['error']}"
+    state = "an" if data.get("enabled") else "aus"
+    ssid = data.get("ssid") or "Gast-WLAN"
+    return f"Gast-WLAN „{ssid}“ ist {state}{_anrede_suffix()}."
+
+
 def identity_reply() -> str:
     return (
         f"Ich bin Jürgen — {settings.assistant_name}, {settings.assistant_acronym}. "

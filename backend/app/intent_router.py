@@ -5,9 +5,13 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from app.integrations import fritzbox as fb
 from app.response_style import (
     control_reply,
     devices_reply,
+    fritz_guest_reply,
+    fritz_hosts_reply,
+    fritz_wan_reply,
     identity_reply,
     parse_json,
     time_reply,
@@ -60,5 +64,26 @@ async def route_intent(user_text: str) -> str | None:
 
     if re.search(r"\b(wer bist du|was bist du|dein name|wie heisst du|wie heißt du|stell dich vor)\b", n):
         return identity_reply()
+
+    if fb.configured():
+        if re.search(
+            r"\b(wer ist im wlan|wer ist online|verbundene geräte|verbundene gerate|"
+            r"geräte am router|gerate am router|fritzbox geräte|heimnetz)\b",
+            n,
+        ):
+            raw_json = await run_tool("fritz_list_hosts", {})
+            return fritz_hosts_reply(parse_json(raw_json))
+
+        if re.search(
+            r"\b(internet|wan|online|verbindung|geht das netz|externe ip|fritzbox status)\b",
+            n,
+        ):
+            raw_json = await run_tool("fritz_internet_status", {})
+            return fritz_wan_reply(parse_json(raw_json))
+
+        if re.search(r"\b(gast.?wlan|gastwifi|guest wifi)\b", n):
+            action = "on" if re.search(r"\b(an|ein|einschalten)\b", n) else "off"
+            raw_json = await run_tool("fritz_guest_wifi", {"action": action})
+            return fritz_guest_reply(parse_json(raw_json), action)
 
     return None

@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from app.agent import chat_once, chat_stream
 from app.config import settings
+from app.integrations import fritzbox as fb
 from app.integrations import homeassistant as ha
 from app.memory import clear_session, init_db
 from app.tools.devices import control_device, list_devices
@@ -64,6 +65,7 @@ class StatusResponse(BaseModel):
     language: str
     smart_home_provider: str
     homeassistant_connected: bool
+    fritzbox_connected: bool
     tts_provider: str
     public_url: str | None
 
@@ -79,6 +81,7 @@ async def health() -> dict[str, str]:
 @app.get("/api/status", response_model=StatusResponse)
 async def status() -> StatusResponse:
     ha_ok = await ha.ping() if ha.configured() else False
+    fb_ok = await fb.ping() if fb.configured() else False
     return StatusResponse(
         name=settings.assistant_name,
         acronym=settings.assistant_acronym,
@@ -88,6 +91,7 @@ async def status() -> StatusResponse:
         language=settings.default_language,
         smart_home_provider=settings.smart_home_provider,
         homeassistant_connected=ha_ok,
+        fritzbox_connected=fb_ok,
         tts_provider=settings.tts_provider,
         public_url=settings.public_url,
     )

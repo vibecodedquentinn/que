@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from app.tools import devices, notes, reminders, time_weather
+from app.tools import devices, fritzbox_tools, notes, reminders, time_weather
 
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
@@ -118,6 +118,40 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "fritz_list_hosts",
+            "description": "Geräte im Heimnetz (Fritz!Box): wer ist online, IP, Name.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "fritz_internet_status",
+            "description": "Internet-/WAN-Status der Fritz!Box (verbunden, externe IP, Uptime).",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "fritz_guest_wifi",
+            "description": "Gast-WLAN der Fritz!Box ein- oder ausschalten.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["on", "off"],
+                        "description": "on = Gast-WLAN an, off = aus",
+                    }
+                },
+                "required": ["action"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "search_notes",
             "description": "Notizen nach Stichwort durchsuchen.",
             "parameters": {
@@ -156,5 +190,11 @@ async def run_tool(name: str, arguments: str | dict[str, Any]) -> str:
             return await notes.save_note(args.get("title", ""), args["body"])
         case "search_notes":
             return await notes.search_notes(args["query"])
+        case "fritz_list_hosts":
+            return await fritzbox_tools.list_fritz_hosts()
+        case "fritz_internet_status":
+            return await fritzbox_tools.fritz_internet_status()
+        case "fritz_guest_wifi":
+            return await fritzbox_tools.fritz_guest_wifi(args["action"])
         case _:
             return json.dumps({"error": f"Unbekanntes Tool: {name}"}, ensure_ascii=False)

@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     homeassistant_url: str | None = None
     homeassistant_token: str | None = None
 
+    fritzbox_enabled: bool = False
+    fritzbox_host: str = "192.168.178.1"
+    fritzbox_user: str = ""
+    fritzbox_password: str | None = None
+
     tts_provider: str = "piper"  # piper (lokal, Thorsten) | edge | gtts | espeak | elevenlabs
     edge_tts_voice: str = "de-DE-ConradNeural"
     gtts_lang: str = "de"
