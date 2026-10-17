@@ -185,6 +185,79 @@ body {
   }
 }
 
+.voice-only .composer {
+  display: none;
+}
+
+.voice-dock {
+  border-top: 1px solid var(--cyan-dim);
+  padding: 1.25rem 1rem max(1.25rem, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.voice-hint {
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  max-width: 28rem;
+  line-height: 1.35;
+}
+
+.voice-orb {
+  width: min(120px, 28vw);
+  height: min(120px, 28vw);
+  border-radius: 50%;
+  border: 2px solid var(--cyan-dim);
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--cyan);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+}
+
+.voice-orb.start {
+  box-shadow: 0 0 32px rgba(61, 231, 255, 0.2);
+}
+
+.voice-orb.listen {
+  animation: pulse 1.2s ease-in-out infinite;
+  box-shadow: 0 0 40px rgba(61, 231, 255, 0.45);
+}
+
+.voice-orb.speak {
+  box-shadow: 0 0 36px rgba(61, 231, 255, 0.35);
+}
+
+.orb-inner {
+  position: absolute;
+  inset: 18%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--cyan) 55%, transparent 70%);
+  opacity: 0.75;
+}
+
+.orb-label {
+  position: relative;
+  z-index: 1;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+
+.voice-layout .chat-panel {
+  min-height: calc(100vh - 130px);
+}
+
+.side-compact .devices-panel {
+  max-height: 40vh;
+}
+
 .composer {
   display: grid;
   grid-template-columns: auto 1fr auto;

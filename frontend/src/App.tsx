@@ -3,6 +3,7 @@ import { ArcReactor } from "./components/ArcReactor";
 import { DevicePanel } from "./components/DevicePanel";
 import { InstallBanner } from "./components/InstallBanner";
 import { SecureContextHint } from "./components/SecureContextHint";
+import { VoiceDock } from "./components/VoiceDock";
 import { useAssistantSocket } from "./hooks/useAssistantSocket";
 import { useSpeech } from "./hooks/useSpeech";
 import type { AssistantStatus, ChatMessage, Device, WsEvent } from "./types";
@@ -13,18 +14,27 @@ function uid() {
 
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
   const [status, setStatus] = useState<AssistantStatus | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [deviceBusy, setDeviceBusy] = useState<string | null>(null);
   const [toolActivity, setToolActivity] = useState<string | null>(null);
-  const [autoSpeak, setAutoSpeak] = useState(true);
+  const [processing, setProcessing] = useState(false);
   const streamIdRef = useRef<string | null>(null);
   const assistantBufferRef = useRef("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const pendingResumeRef = useRef(false);
 
-  const { supported, listening, wakeEnabled, speak, unlockAudio, startListening, stop, toggleWake } =
-    useSpeech("de-DE", status);
+  const {
+    supported,
+    listening,
+    speaking,
+    voiceSession,
+    speakAsync,
+    startVoiceSession,
+    resumeListening,
+    pauseListening,
+    endVoiceSession,
+  } = useSpeech("de-DE", status);
 
   const refreshDevices = useCallback(async () => {
     try {
@@ -32,7 +42,7 @@ export default function App() {
       const data = await res.json();
       setDevices(data.devices ?? []);
     } catch {
-      /* backend offline */
+      /* offline */
     }
   }, []);
 
@@ -49,6 +59,21 @@ export default function App() {
   }, [messages, toolActivity]);
 
   const sendMessageRef = useRef<(text: string) => void>(() => {});
+
+  const onSend = useCallback((text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setProcessing(true);
+    pauseListening();
+    setMessages((m) => [...m, { id: uid(), role: "user", content: trimmed }]);
+    streamIdRef.current = uid();
+    assistantBufferRef.current = "";
+    setMessages((m) => [
+      ...m,
+      { id: streamIdRef.current!, role: "assistant", content: "", streaming: true },
+    ]);
+    sendMessageRef.current(trimmed);
+  }, [pauseListening]);
 
   const handleWsEvent = useCallback(
     (event: WsEvent) => {
@@ -79,42 +104,33 @@ export default function App() {
         }
         streamIdRef.current = null;
         setToolActivity(null);
-        if (autoSpeak && finalText) speak(finalText);
+        setProcessing(false);
+
+        if (voiceSession && finalText) {
+          pendingResumeRef.current = true;
+          void speakAsync(finalText).then(() => {
+            if (pendingResumeRef.current) resumeListening();
+          });
+        } else if (voiceSession) {
+          resumeListening();
+        }
       } else if (event.type === "error") {
         setMessages((m) => [
           ...m.filter((x) => !x.streaming),
           { id: uid(), role: "assistant", content: event.content },
         ]);
         streamIdRef.current = null;
+        setProcessing(false);
+        if (voiceSession) resumeListening();
       } else if (event.type === "cleared") {
         setMessages([]);
       }
     },
-    [autoSpeak, refreshDevices, speak],
+    [refreshDevices, resumeListening, speakAsync, voiceSession],
   );
 
   const { connected, sendMessage, clearSession } = useAssistantSocket(handleWsEvent);
   sendMessageRef.current = sendMessage;
-
-  const submit = useCallback((text: string) => {
-    sendMessageRef.current(text);
-  }, []);
-
-  const onSend = useCallback(
-    (text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed) return;
-      setMessages((m) => [...m, { id: uid(), role: "user", content: trimmed }]);
-      streamIdRef.current = uid();
-      assistantBufferRef.current = "";
-      setMessages((m) => [
-        ...m,
-        { id: streamIdRef.current!, role: "assistant", content: "", streaming: true },
-      ]);
-      submit(trimmed);
-    },
-    [submit],
-  );
 
   const toggleDevice = useCallback(
     async (device: Device) => {
@@ -142,24 +158,20 @@ export default function App() {
     [refreshDevices],
   );
 
-  const handleForm = (e: React.FormEvent) => {
-    e.preventDefault();
-    unlockAudio();
-    onSend(input);
-    setInput("");
+  const handleVoiceStart = () => {
+    startVoiceSession(onSend);
+    void speakAsync("Sprachsteuerung aktiv. Wie kann ich helfen?");
   };
 
-  const handleMic = () => {
-    unlockAudio();
-    if (listening) {
-      stop();
-      return;
-    }
-    startListening((text) => onSend(text), false);
+  const handleVoiceStop = () => {
+    pendingResumeRef.current = false;
+    endVoiceSession();
   };
 
-  const handleSendClick = () => {
-    unlockAudio();
+  const handleReset = () => {
+    pendingResumeRef.current = false;
+    clearSession();
+    if (voiceSession) resumeListening();
   };
 
   const haLabel =
@@ -167,16 +179,19 @@ export default function App() {
       ? status.homeassistant_connected
         ? " · Home Assistant verbunden"
         : " · Home Assistant offline"
-      : " · Demo-Geräte";
+      : " · Nur Sprache";
 
   return (
-    <div className="app">
+    <div className="app voice-only">
       <div className="grid-bg" aria-hidden />
       <InstallBanner />
       <SecureContextHint />
       <header className="top-bar">
         <div className="brand">
-          <ArcReactor active={connected} listening={listening || !!toolActivity} />
+          <ArcReactor
+            active={connected}
+            listening={listening || speaking || !!toolActivity || processing}
+          />
           <div>
             <h1>{status?.name ?? "J.Ü.R.G.E.N."}</h1>
             <p className="subtitle acronym">
@@ -184,47 +199,30 @@ export default function App() {
                 "Joint Überwachungs-Regelungs-Gebäude-Energie-Navigator"}
             </p>
             <p className="subtitle">
-              {connected ? "Systeme online" : "Verbindung wird aufgebaut…"}
-              {!status?.llm_configured && " · Demo-KI (LLM nicht konfiguriert)"}
+              {voiceSession ? "Sprachmodus aktiv" : "Sprachmodus bereit"}
+              {connected ? " · online" : " · verbinden…"}
               {haLabel}
             </p>
           </div>
         </div>
         <div className="top-actions">
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={autoSpeak}
-              onChange={(e) => setAutoSpeak(e.target.checked)}
-            />
-            Sprache
-          </label>
-          <button
-            type="button"
-            className={`btn ${wakeEnabled ? "active" : ""}`}
-            onClick={() => toggleWake((t) => onSend(t))}
-            disabled={!supported}
-            title={supported ? "Wake: Hey Jürgen" : "Sprache nicht verfügbar"}
-          >
-            Wake
-          </button>
-          <button type="button" className="btn ghost" onClick={() => clearSession()}>
+          <button type="button" className="btn ghost" onClick={handleReset}>
             Reset
           </button>
         </div>
       </header>
 
-      <main className="layout">
+      <main className="layout voice-layout">
         <section className="panel chat-panel">
           <div className="chat-log">
             {messages.length === 0 && (
               <div className="empty-state">
-                <p>Tippe oder halte das Mikro — Jürgen hört auf dem iPad im Browser.</p>
+                <p>Kein Tippen nötig.</p>
+                <p>Tippe unten auf <strong>Start</strong>, dann sprich mit Jürgen.</p>
                 <ul>
-                  <li>Wie spät ist es?</li>
-                  <li>Wetter in München</li>
-                  <li>Liste alle Geräte</li>
-                  <li>Schalte light.wohnzimmer an (Home Assistant)</li>
+                  <li>„Hallo Jürgen“</li>
+                  <li>„Wie spät ist es?“</li>
+                  <li>„Wetter in Berlin“</li>
                 </ul>
               </div>
             )}
@@ -238,49 +236,20 @@ export default function App() {
             <div ref={chatEndRef} />
           </div>
 
-          <form className="composer" onSubmit={handleForm}>
-            <button
-              type="button"
-              className={`mic ${listening ? "on" : ""}`}
-              onClick={handleMic}
-              disabled={!supported}
-              aria-label="Mikrofon"
-            >
-              ◉
-            </button>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Befehl oder Frage…"
-              autoComplete="off"
-              enterKeyHint="send"
-            />
-            <button
-              type="submit"
-              className="btn primary"
-              disabled={!connected}
-              onClick={handleSendClick}
-            >
-              Senden
-            </button>
-          </form>
+          <VoiceDock
+            active={voiceSession}
+            listening={listening}
+            speaking={speaking}
+            processing={processing}
+            connected={connected}
+            supported={supported}
+            onStart={handleVoiceStart}
+            onStop={handleVoiceStop}
+          />
         </section>
 
-        <aside className="side">
+        <aside className="side side-compact">
           <DevicePanel devices={devices} onToggle={toggleDevice} busyId={deviceBusy} />
-          <section className="panel info-panel">
-            <h2>Status</h2>
-            <dl>
-              <dt>Modell</dt>
-              <dd>{status?.model ?? "—"}</dd>
-              <dt>TTS</dt>
-              <dd>{status?.tts_provider ?? "browser"}</dd>
-              <dt>Smart Home</dt>
-              <dd>{status?.smart_home_provider ?? "mock"}</dd>
-              <dt>LLM</dt>
-              <dd>{status?.llm_backend ?? (status?.llm_configured ? "API" : "Fallback")}</dd>
-            </dl>
-          </section>
         </aside>
       </main>
     </div>
